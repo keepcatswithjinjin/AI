@@ -1,0 +1,13 @@
+# Generated workspace instances and machine-local state
+workspace/
+local/
+
+# Credentials and personal workspace state
+**/db-targets.json
+**/workspace-state.json
+**/*.local.json
+*.env
+
+# Python runtime artefacts
+__pycache__/
+*.py[cod]

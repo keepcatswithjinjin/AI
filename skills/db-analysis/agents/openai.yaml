@@ -1,0 +1,7 @@
+interface:
+  display_name: "DB Analysis"
+  short_description: "Safe database schema and read-only SQL helper"
+  default_prompt: "Use $db-analysis to inspect database schema and run safe read-only SQL."
+
+policy:
+  allow_implicit_invocation: true
