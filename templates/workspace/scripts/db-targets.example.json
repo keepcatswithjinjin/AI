@@ -1,0 +1,18 @@
+{
+  "targets": [
+    {
+      "name": "example-readonly",
+      "type": "mysql",
+      "host": "db.example.internal",
+      "port": 3306,
+      "database": "",
+      "user": "readonly_user",
+      "password": "",
+      "allowOperationalReadonlyGrants": false,
+      "connectTimeoutSeconds": 15,
+      "queryTimeoutSeconds": 600,
+      "maxRows": 1000,
+      "note": "Replace locally with a dedicated read-only target. Never commit credentials."
+    }
+  ]
+}
