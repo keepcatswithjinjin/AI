@@ -13,6 +13,7 @@
     "deny_direct_clients": true,
     "approved_entrypoints": ["__WORKSPACE_ROOT__/scripts/db-analysis.cmd", "__WORKSPACE_ROOT__/scripts/db-analysis.ps1"],
     "allowed_targets": ["example-readonly"],
+    "allowed_read_actions": ["ping", "grants", "tables", "columns", "create", "query"],
     "deny_config_path_override": true,
     "blocked_sql_keywords": ["alter", "create", "delete", "drop", "grant", "insert", "replace", "revoke", "truncate", "update"],
     "sensitive_identifiers": ["password", "secret", "token", "private_key", "card_pan", "bank_account", "id_card", "passport"]

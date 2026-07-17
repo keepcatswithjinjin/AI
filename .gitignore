@@ -5,6 +5,7 @@ local/
 # Credentials and personal workspace state
 **/db-targets.json
 **/workspace-state.json
+**/maintenance-approval.json
 **/*.local.json
 *.env
 

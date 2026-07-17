@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """PreToolUse guard for a multi-project workspace.
 
-The policy file is deliberately protected from agent edits. A human may change
-it outside the agent; the next tool call reloads the policy. Invalid or missing
-policy fails closed for the guard's own assets and database configuration.
+Governance assets are protected by default. A human may temporarily authorize
+maintenance using ``maintenance-approval.json``. The approval is read-only to
+agents and fails closed when missing or malformed.
 """
 
 from __future__ import annotations
@@ -18,11 +18,13 @@ from typing import Any
 
 ROOT = Path(r"__WORKSPACE_ROOT__")
 POLICY_PATH = ROOT / "governance" / "agent-guard" / "policy.json"
+MAINTENANCE_APPROVAL_PATH = ROOT / "governance" / "agent-guard" / "maintenance-approval.json"
 BASELINE_PROTECTED = [
     "__WORKSPACE_ROOT__/governance/agent-guard/**",
     "__WORKSPACE_ROOT__/scripts/db-targets.json",
     "__WORKSPACE_ROOT__/scripts/db-analysis.cmd",
     "__WORKSPACE_ROOT__/scripts/db-analysis.ps1",
+    "__WORKSPACE_ROOT__/governance/agent-guard/maintenance-approval.json",
 ]
 PATCH_FILE_RE = re.compile(r"^\*\*\* (?:Update|Add|Delete) File: (.+)$", re.MULTILINE)
 MUTATING_SHELL_RE = re.compile(
@@ -46,9 +48,25 @@ def load_policy() -> dict[str, Any]:
         return {"protected_paths": BASELINE_PROTECTED, "high_risk_paths": [], "database": {}}
 
 
+def load_maintenance_approval() -> bool:
+    """Load the single human-controlled maintenance switch, failing closed."""
+    try:
+        data = json.loads(MAINTENANCE_APPROVAL_PATH.read_text(encoding="utf-8"))
+        return isinstance(data, dict) and set(data) == {"enabled"} and data["enabled"] is True
+    except (OSError, json.JSONDecodeError):
+        return False
+
+
 def matches(path: str, patterns: list[str]) -> bool:
     candidate = normalize(path)
     return any(fnmatch.fnmatchcase(candidate, normalize(pattern)) for pattern in patterns)
+
+
+def maintenance_approval_is_active(path: str) -> bool:
+    """The approval file itself remains immutable even while maintenance is on."""
+    if matches(path, [str(MAINTENANCE_APPROVAL_PATH)]):
+        return False
+    return load_maintenance_approval()
 
 
 def deny(reason: str) -> None:
@@ -71,7 +89,7 @@ def contains_blocked_sql(command: str, database: dict[str, Any]) -> str | None:
         return None
     for word in database.get("blocked_sql_keywords", []):
         if re.search(rf"(?i)\b{re.escape(str(word))}\b", command):
-            return f"SQL keyword '{word}' is blocked by the Col governance policy."
+            return f"SQL keyword '{word}' is blocked by the workspace governance policy."
     for name in database.get("sensitive_identifiers", []):
         if re.search(rf"(?i)\b{re.escape(str(name))}\b", command):
             return f"Sensitive identifier '{name}' is blocked from ad-hoc database queries."
@@ -83,9 +101,11 @@ def guard_apply_patch(command: str, policy: dict[str, Any]) -> None:
     high_risk = list(policy.get("high_risk_paths", []))
     for path in patch_paths(command):
         if matches(path, protected):
-            deny("Protected governance/configuration path. Edit the policy or configuration manually outside Codex, then start a new task.")
+            if not maintenance_approval_is_active(path):
+                deny("Protected governance/configuration path. A valid human-issued maintenance approval is required.")
         if matches(path, high_risk):
-            deny("High-risk project path. This global guard requires a manual policy change before an agent may edit it.")
+            if not maintenance_approval_is_active(path):
+                deny("High-risk project path. A valid human-issued maintenance approval is required.")
 
 
 def uses_approved_entrypoint(command: str, database: dict[str, Any], cwd: str) -> bool:
@@ -113,21 +133,26 @@ def guard_bash(command: str, policy: dict[str, Any], cwd: str) -> None:
     if MUTATING_SHELL_RE.search(command):
         for pattern in protected + high_risk:
             stem = normalize(pattern).replace("/**", "")
-            if stem and stem in normalized:
-                deny("Shell mutation targets a protected or high-risk path. Change the governing policy manually outside Codex first.")
+            if stem and stem in normalized and not maintenance_approval_is_active(stem):
+                deny("Shell mutation targets a protected or high-risk path. A valid human-issued maintenance approval is required.")
 
     database = policy.get("database", {}) if isinstance(policy.get("database"), dict) else {}
     if database.get("deny_direct_clients", True) and DIRECT_DB_CLIENT_RE.search(command):
-        deny("Direct mysql/mariadb invocation is blocked. Use D:\\Col\\scripts\\db-analysis.cmd so read-only checks are enforced.")
+        deny("Direct mysql/mariadb invocation is blocked. Use the workspace db-analysis.cmd so read-only checks are enforced.")
     if re.search(r"(?i)db-analysis\.(?:cmd|ps1)\b", command):
         if not uses_approved_entrypoint(command, database, cwd):
-            deny("Database invocation must use a Col-approved db-analysis entrypoint.")
+            deny("Database invocation must use a workspace-approved db-analysis entrypoint.")
         if database.get("deny_config_path_override", True) and re.search(r"(?i)(?<!\S)-configpath\b", command):
             deny("Overriding the database target configuration is blocked.")
-        target_match = re.search(r"(?i)(?<!\S)-target\s+['\"]?([^\s'\"]+)", command)
-        allowed_targets = {str(item).lower() for item in database.get("allowed_targets", [])}
-        if not target_match or target_match.group(1).lower() not in allowed_targets:
-            deny("Database invocation must use an explicitly allowed target.")
+        if not re.search(r"(?i)(?<!\S)-listtargets\b", command):
+            target_match = re.search(r"(?i)(?<!\S)-target\s+['\"]?([^\s'\"]+)", command)
+            allowed_targets = {str(item).lower() for item in database.get("allowed_targets", [])}
+            if not target_match or target_match.group(1).lower() not in allowed_targets:
+                deny("Database invocation must use an explicitly allowed target.")
+            action_match = re.search(r"(?i)(?<!\S)-action\s+['\"]?([^\s'\"]+)", command)
+            allowed_actions = {str(item).lower() for item in database.get("allowed_read_actions", [])}
+            if not action_match or action_match.group(1).lower() not in allowed_actions:
+                deny("Database invocation must use an explicitly allowed read-only action.")
     sql_reason = contains_blocked_sql(command, database)
     if sql_reason:
         deny(sql_reason)
@@ -141,9 +166,11 @@ def guard_edit_or_write(tool_input: dict, policy: dict[str, Any]) -> None:
     protected = list(BASELINE_PROTECTED) + list(policy.get("protected_paths", []))
     high_risk = list(policy.get("high_risk_paths", []))
     if matches(file_path, protected):
-        deny("Protected governance/configuration path. Edit the policy or configuration manually outside Codex, then start a new task.")
+        if not maintenance_approval_is_active(file_path):
+            deny("Protected governance/configuration path. A valid human-issued maintenance approval is required.")
     if matches(file_path, high_risk):
-            deny("High-risk project path. This global guard requires a manual policy change before an agent may edit it.")
+        if not maintenance_approval_is_active(file_path):
+            deny("High-risk project path. A valid human-issued maintenance approval is required.")
 
 
 def main() -> None:

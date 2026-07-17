@@ -31,7 +31,7 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 
 将 `skills/db-analysis` 复制到 Codex 的 skill 目录（通常是 `%USERPROFILE%\.codex\skills\db-analysis`）。复制 `scripts/db-targets.example.json` 为安装后工作区的 `scripts/db-targets.json`，只在本机填写只读账号。
 
-`db-targets.json`、`workspace-state.json` 和所有真实凭据必须保持本地文件，不提交 Git。策略中的 `allowed_targets` 必须与本地目标名一致。
+`db-targets.json`、`workspace-state.json`、`maintenance-approval.json` 和所有真实凭据必须保持本地文件，不提交 Git。策略中的 `allowed_targets` 必须与本地目标名一致；`allowed_read_actions` 仅应包含允许的只读操作。
 
 ## 4. 注册治理 Hook
 
@@ -39,7 +39,7 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 
 ### Codex
 
-在用户级 `config.toml` 添加：
+在用户级 `config.toml` 添加（并确保 `[features]` 中存在 `hooks = true`）：
 
 ```toml
 [[hooks.PreToolUse]]
@@ -76,3 +76,5 @@ timeout = 10
 ## 5. 维护与升级
 
 框架变更在本仓库中提交；已有工作区不会自动更新。升级前先比较模板与工作区的治理、脚本和规则，再有选择地合并。不要用模板覆盖本地数据库配置、工作台状态或项目注册表。
+
+受保护的治理文件默认不能由 Agent 修改。需要维护时，由人工在安装后的 `governance\agent-guard\` 中，从 `maintenance-approval.example.json` 创建 `maintenance-approval.json` 并将其内容设为 `{ "enabled": true }`；完成后手动删除该文件或改回 `false`。该文件本身始终受保护，Agent 无法自行开启维护窗口。
