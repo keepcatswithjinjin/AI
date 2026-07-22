@@ -13,6 +13,7 @@ Use this skill for safe, repeatable database exploration. It provides a portable
 - Do not put real credentials in the skill folder.
 - Keep real target config in a local file outside the skill, copied from `scripts/db-targets.example.json`.
 - Before any target operation, the script checks `SHOW GRANTS FOR CURRENT_USER()` and refuses accounts with write or admin privileges.
+- Treat the configured `database` only as a default schema. If it is empty, first run `-Action databases`; never infer a schema from a target name, project name, or example. Then pass `-Database <actual-schema>` for exploration and use `schema.table` in custom SQL.
 - For custom SQL, only read-only statements are allowed: `SELECT`, `SHOW`, `DESCRIBE`, `DESC`, `EXPLAIN`, and read-only `WITH` queries.
 - Do not run DDL, DML, stored procedures, exports, locks, privilege changes, or multi-statement SQL through this skill.
 
@@ -29,6 +30,13 @@ Check connectivity and readonly status:
 ```powershell
 .\scripts\db-analysis.cmd -ConfigPath "D:\path\db-targets.json" -Target example-readonly -Action ping
 .\scripts\db-analysis.cmd -ConfigPath "D:\path\db-targets.json" -Target example-readonly -Action grants
+```
+
+Discover and select the actual schema when the target has no default:
+
+```powershell
+.\scripts\db-analysis.cmd -ConfigPath "D:\path\db-targets.json" -Target example-readonly -Action databases
+.\scripts\db-analysis.cmd -ConfigPath "D:\path\db-targets.json" -Target example-readonly -Database actual_schema -Action tables
 ```
 
 Explore schema:
@@ -51,8 +59,9 @@ Run read-only SQL:
 2. Read `references/safety.md` before changing the script or attempting custom SQL.
 3. Run `-ListTargets` to choose a target.
 4. Run `-Action ping` to verify connection and read-only enforcement.
-5. Explore schema before writing SQL: `tables` -> `columns` -> `create`.
-6. Run custom `query` only after the relevant tables and columns are known.
+5. If the target has no configured default `database`, run `databases` first and choose the real schema. Never guess it from the target or project name.
+6. Explore the selected schema explicitly: `tables` -> `columns` -> `create` with `-Database <actual-schema>`.
+7. Run custom `query` only after the relevant tables and columns are known; use fully qualified `schema.table` names.
 
 ## Project Knowledge
 
