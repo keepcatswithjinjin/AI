@@ -51,6 +51,29 @@ function Resolve-Target {
     return $match[0]
 }
 
+function Get-AllowedDatabases {
+    param($TargetConfig)
+
+    $allowed = @($TargetConfig.allowedDatabases | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ } | Sort-Object -Unique)
+    if ($allowed.Count -eq 0) {
+        throw "Target '$($TargetConfig.name)' has no allowedDatabases configured; refusing schema access."
+    }
+    return $allowed
+}
+
+function Resolve-ApprovedDatabase {
+    param($TargetConfig, [AllowNull()][string]$DatabaseName, [string]$ActionName)
+
+    if ([string]::IsNullOrWhiteSpace($DatabaseName)) {
+        throw "Database is required for -Action $ActionName. Use -Action databases to view the configured allowlist, then pass -Database <approved-schema>."
+    }
+    $matches = @(Get-AllowedDatabases -TargetConfig $TargetConfig | Where-Object { $_.Equals($DatabaseName.Trim(), [System.StringComparison]::OrdinalIgnoreCase) })
+    if ($matches.Count -eq 0) {
+        throw "Database '$DatabaseName' is not in the allowedDatabases allowlist for target '$($TargetConfig.name)'."
+    }
+    return $matches[0]
+}
+
 function Quote-Identifier {
     param([string]$Value)
 
@@ -254,6 +277,20 @@ function Assert-ReadonlySql {
     return $QueryText
 }
 
+function Assert-QuerySchemasAllowed {
+    param($TargetConfig, [string]$QueryText)
+
+    $allowed = Get-AllowedDatabases -TargetConfig $TargetConfig
+    $normalized = Remove-SqlComments -Text $QueryText
+    $qualifiedSources = [regex]::Matches($normalized, "(?is)\b(?:FROM|JOIN|TABLE)\s+`?([A-Za-z0-9_$]+)`?\s*\.")
+    foreach ($source in $qualifiedSources) {
+        $schema = $source.Groups[1].Value
+        if (-not (@($allowed | Where-Object { $_.Equals($schema, [System.StringComparison]::OrdinalIgnoreCase) }).Count)) {
+            throw "Query references schema '$schema', which is not in the allowedDatabases allowlist for target '$($TargetConfig.name)'."
+        }
+    }
+}
+
 $config = Load-Targets -Path $ConfigPath
 
 if ($ListTargets) {
@@ -277,11 +314,11 @@ switch ($Action) {
         break
     }
     "databases" {
-        Invoke-Mysql -TargetConfig $targetConfig -DbName $null -QueryText "SHOW DATABASES;"
+        Get-AllowedDatabases -TargetConfig $targetConfig
         break
     }
     "tables" {
-        if (-not $dbName) { throw "Database is required for -Action tables." }
+        $dbName = Resolve-ApprovedDatabase -TargetConfig $targetConfig -DatabaseName $dbName -ActionName $Action
         $safeDbName = $dbName.Replace("'", "''")
         $sqlText = @"
 SELECT
@@ -298,7 +335,7 @@ ORDER BY table_name;
         break
     }
     "columns" {
-        if (-not $dbName) { throw "Database is required for -Action columns." }
+        $dbName = Resolve-ApprovedDatabase -TargetConfig $targetConfig -DatabaseName $dbName -ActionName $Action
         if (-not $Table) { throw "Table is required for -Action columns." }
         $safeDbName = $dbName.Replace("'", "''")
         $safeTable = $Table.Replace("'", "''")
@@ -321,14 +358,16 @@ ORDER BY ordinal_position;
         break
     }
     "create" {
-        if (-not $dbName) { throw "Database is required for -Action create." }
+        $dbName = Resolve-ApprovedDatabase -TargetConfig $targetConfig -DatabaseName $dbName -ActionName $Action
         if (-not $Table) { throw "Table is required for -Action create." }
         $quotedTable = Quote-Identifier -Value $Table
         Invoke-Mysql -TargetConfig $targetConfig -DbName $dbName -QueryText "SHOW CREATE TABLE $quotedTable;"
         break
     }
     "query" {
+        $dbName = Resolve-ApprovedDatabase -TargetConfig $targetConfig -DatabaseName $dbName -ActionName $Action
         $safeSql = Assert-ReadonlySql -QueryText $Sql
+        Assert-QuerySchemasAllowed -TargetConfig $targetConfig -QueryText $safeSql
         $boundedSql = Protect-ReadQuery -TargetConfig $targetConfig -QueryText $safeSql
         Invoke-Mysql -TargetConfig $targetConfig -DbName $dbName -QueryText $boundedSql
         break

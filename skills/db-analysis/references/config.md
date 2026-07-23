@@ -34,7 +34,8 @@ These are conventions, not hard-coded skill requirements.
 - `type`: currently only `mysql`
 - `host`: database host
 - `port`: database port
-- `database`: optional default database/schema. An empty value means a multi-schema target; run `-Action databases` before exploration, then explicitly pass `-Database <actual-schema>` or use fully qualified `schema.table` names. Never infer a schema from a target or project name.
+- `database`: optional default database/schema. Keep it empty for a multi-schema target; schema operations still require an explicit `-Database`.
+- `allowedDatabases`: required non-empty list of schemas that this target may expose to an agent. `-Action databases` returns only this list; an unlisted schema is rejected before a query is sent.
 - `user`: database user
 - `password`: optional; empty string supports passwordless local accounts
 - `allowOperationalReadonlyGrants`: optional; keep `false` by default. When `true`, allows `LOCK TABLES`, `PROCESS`, and replication-related grants, but direct write and administrative grants remain prohibited.

@@ -5,7 +5,8 @@
       "type": "mysql",
       "host": "127.0.0.1",
       "port": 3306,
-      "database": "demo_db",
+      "database": "",
+      "allowedDatabases": ["demo_db"],
       "user": "readonly_user",
       "password": "",
       "note": "Example only. Keep real credentials in a local config outside the skill."

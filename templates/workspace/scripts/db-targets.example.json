@@ -6,6 +6,7 @@
       "host": "db.example.internal",
       "port": 3306,
       "database": "",
+      "allowedDatabases": ["example_database"],
       "user": "readonly_user",
       "password": "",
       "allowOperationalReadonlyGrants": false,
