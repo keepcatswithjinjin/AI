@@ -126,20 +126,41 @@ def uses_approved_entrypoint(command: str, database: dict[str, Any], cwd: str) -
     return False
 
 
+def command_without_sql_payload(command: str) -> str:
+    """Mask a quoted PowerShell -Sql value before checking shell mutations.
+
+    The SQL is validated separately. Keeping its comparison operators out of
+    the shell scan avoids treating SQL `> 0` as PowerShell redirection.
+    """
+    match = re.search(r"(?i)(?<!\S)-sql\s+(['\"])", command)
+    if not match:
+        return command
+    quote = match.group(1)
+    index = match.end()
+    while index < len(command):
+        char = command[index]
+        if quote == '"' and char == '`' and index + 1 < len(command):
+            index += 2
+            continue
+        if char == quote:
+            if quote == "'" and index + 1 < len(command) and command[index + 1] == "'":
+                index += 2
+                continue
+            return command[:match.end()] + "<SQL>" + command[index:]
+        index += 1
+    return command
+
+
 def guard_bash(command: str, policy: dict[str, Any], cwd: str) -> None:
     protected = list(BASELINE_PROTECTED) + list(policy.get("protected_paths", []))
     high_risk = list(policy.get("high_risk_paths", []))
     normalized = normalize(command)
-    if MUTATING_SHELL_RE.search(command):
-        for pattern in protected + high_risk:
-            stem = normalize(pattern).replace("/**", "")
-            if stem and stem in normalized and not maintenance_approval_is_active(stem):
-                deny("Shell mutation targets a protected or high-risk path. A valid human-issued maintenance approval is required.")
 
     database = policy.get("database", {}) if isinstance(policy.get("database"), dict) else {}
     if database.get("deny_direct_clients", True) and DIRECT_DB_CLIENT_RE.search(command):
         deny("Direct mysql/mariadb invocation is blocked. Use the workspace db-analysis.cmd so read-only checks are enforced.")
-    if re.search(r"(?i)db-analysis\.(?:cmd|ps1)\b", command):
+    is_database_invocation = bool(re.search(r"(?i)db-analysis\.(?:cmd|ps1)\b", command))
+    if is_database_invocation:
         if not uses_approved_entrypoint(command, database, cwd):
             deny("Database invocation must use a workspace-approved db-analysis entrypoint.")
         if database.get("deny_config_path_override", True) and re.search(r"(?i)(?<!\S)-configpath\b", command):
@@ -153,6 +174,12 @@ def guard_bash(command: str, policy: dict[str, Any], cwd: str) -> None:
             allowed_actions = {str(item).lower() for item in database.get("allowed_read_actions", [])}
             if not action_match or action_match.group(1).lower() not in allowed_actions:
                 deny("Database invocation must use an explicitly allowed read-only action.")
+    shell_scan_command = command_without_sql_payload(command) if is_database_invocation else command
+    if MUTATING_SHELL_RE.search(shell_scan_command):
+        for pattern in protected + high_risk:
+            stem = normalize(pattern).replace("/**", "")
+            if stem and stem in normalized and not maintenance_approval_is_active(stem):
+                deny("Shell mutation targets a protected or high-risk path. A valid human-issued maintenance approval is required.")
     sql_reason = contains_blocked_sql(command, database)
     if sql_reason:
         deny(sql_reason)

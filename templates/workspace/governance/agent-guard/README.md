@@ -25,6 +25,10 @@ The guard blocks:
 - direct `mysql`/`mariadb` shell usage;
 - destructive or sensitive ad-hoc SQL passed to the Col DB wrapper.
 
+For an approved database wrapper command, a quoted `-Sql` value is checked by
+the SQL policy rather than interpreted as a Shell redirect. Shell mutations
+outside that value remain guarded.
+
 It does not replace database grants, operating-system permissions, or remote
 branch protections. Database operations must continue through the workspace
 `scripts\db-analysis.cmd`.
