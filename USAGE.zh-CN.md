@@ -25,7 +25,7 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 .\install.ps1 -WorkspaceRoot D:\Workspace
 ```
 
-安装脚本仅允许写入空目录，且会把 `__WORKSPACE_ROOT__` 渲染为实际路径。随后手工维护 `rules/worktree.md`，登记自己的项目和 worktree 父目录。
+安装脚本仅允许写入空目录，且会把 `__WORKSPACE_ROOT__` 渲染为实际路径。随后手工维护 `rules/worktree.md`，登记自己的项目和 worktree 父目录。创建/删除 worktree 时优先使用安装后工作区内的 `scripts\new-worktree.cmd` 与 `scripts\remove-worktree.cmd`。
 
 ## 3. 安装数据库 skill 与本地配置
 
@@ -73,8 +73,18 @@ timeout = 10
 
 重启对应 Agent 后，以安全查询、非法目标和受保护文件修改分别验证允许与拒绝行为。
 
-## 5. 维护与升级
+## 5. Serena / Java 配置边界
 
-框架变更在本仓库中提交；已有工作区不会自动更新。升级前先比较模板与工作区的治理、脚本和规则，再有选择地合并。不要用模板覆盖本地数据库配置、工作台状态或项目注册表。
+Serena 是可选能力，适合复杂需求中大量查询函数、类、引用和调用关系。模板不会写死作者机器上的 Serena、JDK、JRE 或 JDTLS 路径。
+
+启用方式：使用安装后工作区的 `.\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Serena Enable`。
+
+`new-worktree.ps1` 会按顺序寻找 Serena 可执行文件：命令参数 `-SerenaExe <path>`、环境变量 `SERENA_EXE`、PATH 中的 `serena`。
+
+如果 Serena 的 Java LSP 需要 JDK/JRE/JDTLS，请使用者在自己的 Serena 用户级配置或项目文档中配置，例如 `%USERPROFILE%\.serena\serena_config.yml`。不同项目需要不同 Java 版本时，以项目实际要求为准；不要复用模板作者的本机路径。
+
+## 6. 维护与升级
+
+框架变更在本仓库中提交；已有工作区不会自动更新。升级前先比较模板与工作区的治理、脚本和规则，再有选择地合并。不要用模板覆盖本地数据库配置、工作台状态、Serena 用户级配置或项目注册表。
 
 受保护的治理文件默认不能由 Agent 修改。需要维护时，由人工在安装后的 `governance\agent-guard\` 中，从 `maintenance-approval.example.json` 创建 `maintenance-approval.json` 并将其内容设为 `{ "enabled": true }`；完成后手动删除该文件或改回 `false`。该文件本身始终受保护，Agent 无法自行开启维护窗口。

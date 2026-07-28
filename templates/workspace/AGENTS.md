@@ -70,7 +70,11 @@
 
 > AI 检测到对应意图时，**必须先读取**路由指向的文件，再执行。
 
-删除 worktree 时，除读取 `rules/worktree.md` 外，还必须同步读取 `scripts/workspace-state.json`，找到最匹配的 `sessionName` 并向用户确认是否同步清理工作台状态。
+创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。启用 Serena 时必须由脚本写入项目级 `.codex/config.toml`，Serena 可执行文件/JDK/JRE/JDTLS 路径由使用者自己的环境配置提供，不得写死模板作者机器路径。
+
+删除 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/remove-worktree.cmd -WorktreePath <路径> -Preview` 输出删除预案；若启用了 Serena，删除预案必须包含用户级 Serena 项目注册和可归属 JDTLS workspace 索引清理项。
+
+当需求方案设计或复杂代码理解需要大量查询函数、类、引用、调用关系时，可优先考虑在已启用 Serena 的 worktree 中使用 Serena 工具；简单文本检索、文件定位和日志查看仍优先使用 `rg` / 常规只读命令。
 
 当用户要求“查看当前 Git 状态 / worktree 状态 / 测试分支占用 / Git 仪表盘”时，进入**只读看板模式**，允许在根目录直接执行：
 

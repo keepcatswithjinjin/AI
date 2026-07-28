@@ -1,6 +1,6 @@
 # Multi-Project Workstation
 
-一个可复用的 Windows 多项目工作站模板：集中管理项目注册、Git worktree、Agent 工作台恢复、只读数据库分析，以及 Codex / Claude Code 的统一治理。
+一个可复用的 Windows 多项目工作站模板：集中管理项目注册、Git worktree、可选 Serena 代码理解、Agent 工作台恢复、只读数据库分析，以及 Codex / Claude Code 的统一治理。
 
 本仓库管理的是**工作站框架**，不是业务项目的父仓库。安装后生成的工作区容器不纳入本仓库 Git；其中每个业务项目仍保留自己的独立 Git 仓库。
 

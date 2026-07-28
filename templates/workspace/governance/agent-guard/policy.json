@@ -17,5 +17,16 @@
     "deny_config_path_override": true,
     "blocked_sql_keywords": ["alter", "create", "delete", "drop", "grant", "insert", "replace", "revoke", "truncate", "update"],
     "sensitive_identifiers": ["password", "secret", "token", "private_key", "card_pan", "bank_account", "id_card", "passport"]
+  },
+  "git": {
+    "deny_direct_worktree_add": true,
+    "deny_direct_worktree_remove": true,
+    "deny_branch_delete": true,
+    "deny_reset_hard": true,
+    "deny_clean_force": true,
+    "deny_force_or_delete_push": true,
+    "deny_workspace_root_init": true,
+    "worktree_create_entrypoint": "__WORKSPACE_ROOT__/scripts/new-worktree.cmd",
+    "worktree_remove_entrypoint": "__WORKSPACE_ROOT__/scripts/remove-worktree.cmd"
   }
 }
