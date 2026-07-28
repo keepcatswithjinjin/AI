@@ -224,3 +224,5 @@ if ($serenaMode -eq "Enable") {
 Write-Host "Done."
 Write-Host "Open this path in Codex desktop:"
 Write-Host "  $worktreePath"
+Write-Host "Remember to update brief code mapping:"
+Write-Host "  __WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md"

@@ -206,7 +206,7 @@ def guard_git(command: str, policy: dict[str, Any], cwd: str) -> None:
             if action == "add" and git_policy.get("deny_direct_worktree_add", True):
                 deny("Direct git worktree add is blocked. Use the workspace new-worktree.cmd so path, branch, and Serena rules are enforced.")
             if action == "remove" and git_policy.get("deny_direct_worktree_remove", True):
-                deny("Direct git worktree remove is blocked. Use the workspace remove-worktree.cmd so workspace-state and Serena indexes are cleaned safely.")
+                deny("Direct git worktree remove is blocked. Use the workspace remove-worktree.cmd so worktree and Serena indexes are cleaned safely.")
         if subcommand == "branch" and git_policy.get("deny_branch_delete", True):
             if any(flag in {"-d", "-D".lower(), "--delete"} for flag in lowered):
                 deny("Direct git branch deletion is blocked. Confirm branch cleanup separately.")

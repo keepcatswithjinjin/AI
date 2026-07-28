@@ -7,7 +7,6 @@ param(
     [switch]$SkipSerenaCleanup,
     [switch]$StopSerenaProcesses,
 
-    [string]$StatePath = "__WORKSPACE_ROOT__\scripts\workspace-state.json",
     [string]$SerenaConfigPath = "$env:USERPROFILE\.serena\serena_config.yml",
     [string]$WorkspaceWorktreesRoot = "__WORKSPACE_ROOT__\worktrees",
     [string]$WorktreeRulesPath = "__WORKSPACE_ROOT__\rules\worktree.md"
@@ -18,48 +17,6 @@ $ErrorActionPreference = "Stop"
 function Normalize-PathString {
     param([Parameter(Mandatory = $true)][string]$Path)
     return [System.IO.Path]::GetFullPath($Path).TrimEnd('\')
-}
-
-function Get-WorkspaceStateMatches {
-    param(
-        [Parameter(Mandatory = $true)][string]$ProjectPath,
-        [Parameter(Mandatory = $true)][string]$StateFile
-    )
-    if (-not (Test-Path -LiteralPath $StateFile)) {
-        return @()
-    }
-    $state = Get-Content -LiteralPath $StateFile -Raw | ConvertFrom-Json
-    $name = Split-Path -Leaf $ProjectPath
-    $matches = @()
-    foreach ($session in $state.sessions) {
-        $sessionPath = if ($session.path) { Normalize-PathString $session.path } else { "" }
-        $sessionName = [string]$session.sessionName
-        if ($sessionPath.Equals($ProjectPath, [System.StringComparison]::OrdinalIgnoreCase)) {
-            $matches += [pscustomobject]@{ Session = $session; Reason = "path" }
-        }
-        elseif ($sessionName.Equals($name, [System.StringComparison]::OrdinalIgnoreCase)) {
-            $matches += [pscustomobject]@{ Session = $session; Reason = "name" }
-        }
-        elseif (($sessionPath -like "*$name*") -or ($sessionName -like "*$name*")) {
-            $matches += [pscustomobject]@{ Session = $session; Reason = "contains" }
-        }
-    }
-    return $matches
-}
-
-function Update-WorkspaceStateAfterWorktreeDelete {
-    param(
-        [Parameter(Mandatory = $true)][object[]]$Matches,
-        [Parameter(Mandatory = $true)][string]$StateFile
-    )
-    if ($Matches.Count -eq 0) {
-        return
-    }
-    $state = Get-Content -LiteralPath $StateFile -Raw | ConvertFrom-Json
-    $names = @($Matches | ForEach-Object { $_.Session.sessionName })
-    $state.sessions = @($state.sessions | Where-Object { $names -notcontains $_.sessionName })
-    $state.updatedAt = (Get-Date -Format "yyyy-MM-dd")
-    $state | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $StateFile -Encoding UTF8
 }
 
 function Test-IsUnderPath {
@@ -398,7 +355,6 @@ else {
     }
 }
 
-$stateMatches = @(Get-WorkspaceStateMatches -ProjectPath $resolvedWorktreePath -StateFile $StatePath)
 $serenaWorkspaces = @()
 $serenaRegistered = (-not $SkipSerenaCleanup) -and (Test-SerenaProjectRegistered -ProjectPath $resolvedWorktreePath -ConfigPath $SerenaConfigPath)
 $localSerenaEnabled = (-not $SkipSerenaCleanup) -and (Test-SerenaEnabled -Path $resolvedWorktreePath)
@@ -416,10 +372,6 @@ $stoppableSerenaProcesses = if ($serenaEnabled) { @(Get-StoppableSerenaProcesses
 Write-Host "Worktree removal plan"
 Write-Host "  worktree: $resolvedWorktreePath"
 Write-Host "  main repo: $mainRepo"
-Write-Host "  state matches: $($stateMatches.Count)"
-foreach ($match in $stateMatches) {
-    Write-Host "    - $($match.Session.sessionName) [$($match.Reason)] $($match.Session.path)"
-}
 Write-Host "  serena enabled: $serenaEnabled"
 if ($serenaEnabled) {
     Write-Host "  serena project registration update: $willUpdateSerenaProjects"
@@ -493,10 +445,6 @@ if (Test-Path -LiteralPath $gitMetaPath) {
     Remove-Item -LiteralPath $resolvedMeta -Recurse -Force
 }
 
-if ($stateMatches.Count -gt 0) {
-    Update-WorkspaceStateAfterWorktreeDelete -Matches $stateMatches -StateFile $StatePath
-}
-
 if ($serenaEnabled) {
     [void](Remove-SerenaProjectRegistration -ProjectPath $resolvedWorktreePath -ConfigPath $SerenaConfigPath -DoWrite:$true)
     foreach ($item in $serenaWorkspaces) {
@@ -508,3 +456,5 @@ if ($serenaEnabled) {
 }
 
 Write-Host "Done."
+Write-Host "Remember to update brief code mapping:"
+Write-Host "  __WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md"

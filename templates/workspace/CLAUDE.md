@@ -1,4 +1,4 @@
-# 多项目工作站 - 设计工作站
+# 多项目工作区 - 设计工作站
 
 > 本目录下的 Claude Code session **仅用于方案设计，不执行代码**。
 > 执行阶段请切换到各自项目目录开启新 session。
@@ -56,13 +56,12 @@
 | 场景 | 读取文件 | 说明 |
 |------|---------|------|
 | 检查整体结构 | `STRUCTURE.md` | 了解全局目录、唯一真相源和更新检查规则 |
-| 检查脚本目录 | `scripts/INDEX.md` | 了解当前脚本、状态文件和执行入口 **（意图为注册/恢复工作区时强制先读）** |
+| 检查脚本目录 | `scripts/INDEX.md` | 了解当前脚本和执行入口 |
 | 检查规则维护点 | `rules/INDEX.md` | 判断规则变更需要同步哪些文档 |
-| 查看 Codex 跨项目治理 | `governance/agent-guard/README.md` | Hook、防护路径和 SQL 策略；受保护文件仅允许人工修改 |
-| 查看 Codex 跨项目治理 | `governance/agent-guard/README.md` | Hook、防护路径和 SQL 策略；受保护文件仅允许人工修改 |
+| 查看跨 Agent 治理 | `governance/agent-guard/README.md` | Codex / Claude Hook、防护路径和 SQL 策略；受保护文件仅允许人工修改 |
 | 查看 Git/worktree 状态 | `scripts/git-dashboard.cmd` | 自动扫描注册项目、worktree 分支、测试分支占用 |
 | 查询数据库结构 | `scripts/INDEX.md` | 根据本地数据库目标配置执行只读分析 |
-| 恢复工作台 | `scripts/INDEX.md` | 根据本地状态恢复已登记的 agent 工作目录 |
+| 查看需求代码位置 | `briefs/WORKTREE-INDEX.md` | 查看 brief 对应的前端/后端代码位置和分支 |
 | 设计方案 | `rules/design.md` | 方案章节、接口原则、前后端协作、检查清单 |
 | 开始新需求 | `rules/task-lifecycle.md` | 判断简单/复杂需求，创建 briefs 结构和执行入口 |
 | 管理 worktree | `rules/worktree.md` | 注册表、创建/删除交互流程 |
@@ -70,9 +69,9 @@
 
 > AI 检测到对应意图时，**必须先读取**路由指向的文件，再执行。
 
-创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。启用 Serena 时必须由脚本写入项目级 `.codex/config.toml`，Serena 可执行文件/JDK/JRE/JDTLS 路径由使用者自己的环境配置提供，不得写死模板作者机器路径。
+创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。启用 Serena 时必须由脚本写入项目级 `.codex/config.toml`。
 
-删除 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/remove-worktree.cmd -WorktreePath <路径> -Preview` 输出删除预案；若启用了 Serena，删除预案必须包含用户级 Serena 项目注册和可归属 JDTLS workspace 索引清理项。
+删除 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/remove-worktree.cmd -WorktreePath <路径> -Preview` 输出删除预案；若启用了 Serena，删除预案必须包含用户级 Serena 项目注册和可归属 JDTLS workspace 索引清理项。删除完成后必须同步更新 `briefs/WORKTREE-INDEX.md` 中对应代码位置。
 
 当需求方案设计或复杂代码理解需要大量查询函数、类、引用、调用关系时，可优先考虑在已启用 Serena 的 worktree 中使用 Serena 工具；简单文本检索、文件定位和日志查看仍优先使用 `rg` / 常规只读命令。
 
@@ -102,22 +101,7 @@
 .\scripts\db-analysis.cmd -Target <name> -Action tables
 ```
 
-当用户要求“恢复工作台 / 恢复工作区 / 打开昨天的工作目录 / 恢复 agent 工作区”时，必须先读取 `scripts/INDEX.md`，然后执行：
-
-```powershell
-.\scripts\open-workspace.cmd
-```
-
-如用户先想确认会打开哪些目录，再执行：
-
-```powershell
-.\scripts\open-workspace.cmd -WhatIf -All
-```
-
-恢复约束：
-
-- 通过 `workspace-state.json` 中登记的 `sessionName` 恢复。
-- 若用户要求注册工作台，使用用户提供的可恢复 `sessionName` 登记；不要求它等于分支名。
+当用户要求“某个需求对应哪个前端/后端目录、哪个分支”时，必须读取 `briefs/WORKTREE-INDEX.md`。不要从 Agent 会话名、交接文档或历史状态文件推断当前代码位置。
 
 ---
 
@@ -130,6 +114,7 @@
 ## 五、需求简报索引
 
 > 所有需求简报见 `briefs/INDEX.md`。需求名 = worktree 名 = brief 文件夹名。
+> 需求对应的前端/后端代码位置和分支见 `briefs/WORKTREE-INDEX.md`。
 
 ---
 
@@ -139,7 +124,7 @@
 
 当在 worktree 目录下启动执行 session 时，Agent **必须先执行以下步骤**，无需用户手动指定方案路径：
 
-1. **提取需求名**：从 worktree 路径中提取（如 `worktrees/project-api-worktree/order-export` → `order-export`）
+1. **提取需求名**：从 worktree 路径中提取（如 `worktrees/project-api-worktree/example-feature` → `example-feature`）
 2. **读取需求简报索引**：`__WORKSPACE_ROOT__\briefs\INDEX.md`
 3. **搜索方案**：在 `__WORKSPACE_ROOT__\briefs/` 下搜索与需求名匹配的文件夹
    ```powershell
@@ -149,8 +134,9 @@
 
 强制约束：
 
-- Col 需求简报唯一根目录是 `__WORKSPACE_ROOT__\briefs`。
-- 项目或 worktree 内的自定义文档目录不是需求简报入口，禁止用它推断方案路径或前后端执行目录。
+- 工作区需求简报唯一根目录是 `__WORKSPACE_ROOT__\briefs`。
+- 项目或 worktree 内的 `tasks/` 不是工作区需求简报入口，禁止用它推断方案路径或前后端执行目录。
+- 项目内 `tasks/lessons.md` 只能作为项目经验教训参考，不能覆盖 `__WORKSPACE_ROOT__\briefs/<类型>/<需求名>/` 下的设计和计划。
 - 新交接文档统一命名为 `agent-guide.md`；历史 `需求-agent-guide.md`、`handoff-agent-guide.md` 只做兼容读取。
 
 > **目的**：Agent 自动发现上下文，用户不再需要手动粘贴方案文件路径。
