@@ -13,6 +13,7 @@
 | `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | MySQL 数据库结构查询和分析入口，转调全局 `db-analysis` skill |
 | `scripts/db-targets.json` | 本地数据库目标配置 |
 | `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 受控删除 worktree，并清理可归属 Serena 索引 |
+| `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 受控提交当前功能分支指定文件、合入指定分支并恢复功能分支 |
 | `scripts/INDEX.md` | scripts 目录索引，说明脚本和状态文件职责 |
 | `rules/` | 公共流程规则，避免根入口膨胀 |
 | `governance/agent-guard/` | Codex / Claude Code 共用 Hook 与受保护路径、SQL 治理策略 |
@@ -32,6 +33,7 @@
 | 新增 worktree | `scripts\new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` |
 | 查询数据库结构 | `scripts\db-analysis.cmd -ListTargets` |
 | 删除 worktree | `scripts\remove-worktree.cmd -WorktreePath <路径> -Preview` |
+| 提交并合入指定测试/集成分支 | `scripts\publish-to-branch.cmd -TargetBranch <分支> -Files <逗号分隔文件> -CommitMessage <信息> -Preview` |
 | 查看需求对应代码位置和分支 | `briefs\WORKTREE-INDEX.md` |
 | 引入新项目 | `vibe-coding-新项目初始化指南.md` |
 | 查看规则维护点 | `rules/INDEX.md` |
@@ -54,6 +56,7 @@
 - 新增 worktree 若启用 Serena，必须按 `rules/worktree.md` 写入项目级 `.codex/config.toml`，并使用已验证的 Serena 可执行文件绝对路径。
 - 需求方案设计或复杂代码理解中，如需要大量查询函数、类、引用、调用关系，可优先考虑在启用 Serena 的 worktree 中使用 Serena；文本检索和简单定位仍可使用 `rg`。
 - 删除 worktree 优先使用 `scripts\remove-worktree.cmd`；启用 Serena 的 worktree 会同步清理用户级项目注册和可归属 JDTLS workspace 索引，保留共享索引与日志。
+- 功能分支提交并合入测试/集成分支优先使用 `scripts\publish-to-branch.cmd`；它先推送并修正当前分支 upstream，仅在目标分支成功推送后恢复功能分支。占用、冲突和远端拒绝均停止等待人工决定。
 
 ## Brief 与代码位置索引
 

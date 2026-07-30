@@ -27,6 +27,8 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 
 安装脚本仅允许写入空目录，且会把 `__WORKSPACE_ROOT__` 渲染为实际路径。随后手工维护 `rules/worktree.md`，登记自己的项目和 worktree 父目录。创建/删除 worktree 时优先使用安装后工作区内的 `scripts\new-worktree.cmd` 与 `scripts\remove-worktree.cmd`。
 
+功能完成并需要合入测试或集成分支时，使用 `scripts\publish-to-branch.cmd`。它要求显式指定目标分支、逗号分隔的仓库相对文件清单和提交信息；先运行 `-Preview`，确认后再执行。脚本会先推送源分支并修正 upstream，再临时切换、合入并推送目标分支；目标分支占用、冲突或远端拒绝时会停止等待人工决定。
+
 ## 3. 安装数据库 skill 与本地配置
 
 将 `skills/db-analysis` 复制到 Codex 的 skill 目录（通常是 `%USERPROFILE%\.codex\skills\db-analysis`）。复制 `scripts/db-targets.example.json` 为安装后工作区的 `scripts/db-targets.json`，只在本机填写只读账号。
@@ -39,17 +41,13 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 
 ### Codex
 
-在用户级 `config.toml` 添加（并确保 `[features]` 中存在 `hooks = true`）：
+确保用户级 `config.toml` 的 `[features]` 中存在 `hooks = true`。随后执行安装后工作区中的：
 
-```toml
-[[hooks.PreToolUse]]
-matcher = "Bash|apply_patch|Edit|Write"
-
-[[hooks.PreToolUse.hooks]]
-type = "command"
-command = 'python "D:\\Workspace\\governance\\agent-guard\\pre_tool_guard.py"'
-timeout = 10
+```powershell
+.\governance\agent-guard\sync-hooks.ps1
 ```
+
+该脚本从 `governance\agent-guard\hook-registry.json` 生成用户级配置的受管 Hook 区块，包含 PreToolUse 与只校验 worktree 生命周期的 PostToolUse。不要手工维护 `[[hooks.*]]`。
 
 ### Claude Code
 

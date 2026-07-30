@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash|apply_patch|Edit|Write",
+      "script": "pre_tool_guard.py",
+      "timeout": 10,
+      "statusMessage": "Checking workspace governance policy"
+    },
+    {
+      "event": "PostToolUse",
+      "matcher": "Bash",
+      "script": "post_tool_guard.py",
+      "timeout": 10,
+      "statusMessage": "Verifying worktree lifecycle result"
+    }
+  ]
+}
+

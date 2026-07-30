@@ -15,6 +15,7 @@
 | `scripts/new-worktree.cmd` / `scripts/new-worktree.ps1` | Worktree 创建入口 | 新增需求 worktree、创建分支、按需写入 Serena 配置 |
 | `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | 数据库结构查询和分析 | 查看 MySQL 库、表、字段和建表语句 |
 | `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | Worktree 删除入口 | 删除 worktree、清理可归属 Serena 索引 |
+| `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 功能分支发布入口 | 提交指定文件、合入指定测试/集成分支、成功后恢复源分支 |
 | `rules/INDEX.md` | 规则文件索引与维护清单 | 修改任一规则文件前后 |
 | `rules/worktree.md` | 根项目注册表、worktree 创建/删除规则 | 创建、删除、迁移 worktree |
 | `rules/task-lifecycle.md` | 新需求初始化流程 | 开始新需求 |

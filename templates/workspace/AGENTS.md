@@ -57,6 +57,7 @@
 |------|---------|------|
 | 检查整体结构 | `STRUCTURE.md` | 了解全局目录、唯一真相源和更新检查规则 |
 | 检查脚本目录 | `scripts/INDEX.md` | 了解当前脚本、状态文件和执行入口 |
+| 提交并合入指定测试/集成分支 | `scripts/INDEX.md` | 使用受控脚本发布当前功能分支，先预览再执行 |
 | 检查规则维护点 | `rules/INDEX.md` | 判断规则变更需要同步哪些文档 |
 | 查看跨 Agent 治理 | `governance/agent-guard/README.md` | Codex / Claude Hook、防护路径和 SQL 策略；受保护文件仅允许人工修改 |
 | 查看 Git/worktree 状态 | `scripts/git-dashboard.cmd` | 自动扫描注册项目、worktree 分支、测试分支占用 |
@@ -72,6 +73,8 @@
 创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。启用 Serena 时必须由脚本写入项目级 `.codex/config.toml`。
 
 删除 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/remove-worktree.cmd -WorktreePath <路径> -Preview` 输出删除预案；若启用了 Serena，删除预案必须包含用户级 Serena 项目注册和可归属 JDTLS workspace 索引清理项。删除完成后必须同步更新 `briefs/WORKTREE-INDEX.md` 中对应代码位置。
+
+当用户要求“提交当前功能分支并合入某个测试/集成分支”时，必须先读取 `scripts/INDEX.md`，再使用 `scripts/publish-to-branch.cmd` 先执行 `-Preview`。确认后才可执行；目标分支占用、冲突、远端拒绝或其他失败必须停止并请求人工决定，禁止手写 checkout / merge / push 流程绕过脚本。
 
 当需求方案设计或复杂代码理解需要大量查询函数、类、引用、调用关系时，可优先考虑在已启用 Serena 的 worktree 中使用 Serena 工具；简单文本检索、文件定位和日志查看仍优先使用 `rg` / 常规只读命令。
 

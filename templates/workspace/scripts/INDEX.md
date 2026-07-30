@@ -32,6 +32,8 @@
 | `db-targets.json` | 本地数据库目标配置 | 维护常用数据库连接目标 |
 | `remove-worktree.cmd` | Windows 入口，受控删除 worktree 并清理可归属 Serena 索引 | 删除需求 worktree |
 | `remove-worktree.ps1` | Worktree 删除主脚本 | 调整删除前检查或 Serena 清理逻辑时 |
+| `publish-to-branch.cmd` | Windows 入口，将当前功能分支的指定文件提交、推送并受控合入指定远端分支 | 功能完成后提交并合入测试/集成分支 |
+| `publish-to-branch.ps1` | 分支发布主脚本 | 调整提交、分支切换、合并与推送的安全检查时 |
 
 ---
 
@@ -114,6 +116,26 @@
 - Serena 的 `sharedIndex` 是跨项目共享缓存，删除单个 worktree 时必须保留。
 - Serena logs 默认保留，用于审计与排障。
 
+### 3.5 发布当前功能分支到指定分支
+
+```powershell
+.\scripts\publish-to-branch.cmd `
+  -ProjectPath "__WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>" `
+  -TargetBranch test `
+  -Files "src\path\FileA.java,src\path\FileB.java" `
+  -CommitMessage "feat(scope): describe change" `
+  -Preview
+```
+
+确认预览后，使用相同参数去掉 `-Preview` 执行。
+
+- `TargetBranch` 由调用方指定；脚本不固定测试分支名，也不自动创建远端目标分支。
+- `Files` 使用逗号分隔的仓库相对路径，且当前所有未提交文件必须与该清单完全一致。
+- 脚本先以 `git push -u origin <当前分支>` 推送源分支，修正误跟踪默认分支的 upstream。
+- 仅在目标分支成功推送后才切回源分支。
+- 分支占用、冲突、远端拒绝、目标不存在或任一 Git 失败均停止并要求人工决定；不强制处理、不自动回滚。
+
+
 ## 四、Agent 路由
 
 当意图是以下场景时，优先读取本文件：
@@ -132,6 +154,7 @@
 - 查询数据库结构：执行 `.\scripts\db-analysis.cmd -Target <name> -Action tables|columns|create`
 - 删除 worktree：先执行 `.\scripts\remove-worktree.cmd -WorktreePath <worktree路径> -Preview`，确认后再执行不带 `-Preview` 的删除命令
 - 创建 worktree 并启用 Serena：按 `rules/worktree.md` 写入项目级 `.codex/config.toml`，Serena 命令必须使用已验证的可执行文件绝对路径，不自动回退到裸 `serena`
+- 提交并合入指定测试/集成分支：先执行 `.\scripts\publish-to-branch.cmd ... -Preview`，确认后再去掉 `-Preview`；不要手写 checkout / merge / push 绕过脚本
 
 ---
 

@@ -16,6 +16,7 @@
 | `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | 工具入口 | Windows 下查询 MySQL 数据库结构和分析 SQL | 随脚本维护 |
 | `scripts/db-targets.json` | 本地状态 | 记录常用数据库连接目标 | 手工维护 |
 | `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 工具入口 | 受控删除 worktree，并清理可归属 Serena 索引 | 随脚本维护 |
+| `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 工具入口 | 受控提交功能分支指定文件、合入指定分支并恢复功能分支 | 随脚本维护 |
 | `scripts/INDEX.md` | 脚本索引 | 说明 scripts 内脚本和状态文件职责 | 手工维护 |
 | `vibe-coding-新项目初始化指南.md` | 流程指南 | 新项目接入当前工作区 | 手工维护 |
 | `rules/` | 规则目录 | 设计、需求、worktree、交接规则 | 手工维护 |
@@ -42,6 +43,7 @@
 | 跨 Agent 治理策略 | `governance/agent-guard/policy.json` | 定义受保护路径、高风险路径和 SQL 防护策略 |
 | Brief 对应代码位置和分支 | `briefs/WORKTREE-INDEX.md` | 不在交接文档或会话状态中重复维护 |
 | Worktree 删除入口 | `scripts/remove-worktree.ps1` | 统一执行删除前检查和 Serena 可归属索引清理 |
+| 功能分支发布入口 | `scripts/publish-to-branch.ps1` | 统一执行文件范围检查、源分支推送、目标分支合并与恢复源分支 |
 | 脚本目录路由 | `scripts/INDEX.md` | 只做脚本入口说明，不复制脚本实现 |
 | 新需求生命周期 | `rules/task-lifecycle.md` | 只引用，不复制 |
 | 设计方案格式 | `rules/design.md` | 只引用，不复制 |
