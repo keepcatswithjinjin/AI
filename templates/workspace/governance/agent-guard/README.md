@@ -20,21 +20,33 @@ guards/
   database_guard.py               # MySQL entrypoint, target/action, SQL restrictions
   git_guard.py                    # destructive Git commands
   worktree_guard.py               # controlled worktree scripts and JSON-result requirement
+post_tool_guard.py                # PostToolUse: validates executed worktree lifecycle commands
+hook-registry.json                # Single source of truth for Codex Hook matchers/commands
+sync-hooks.ps1                    # Renders the registry into the workspace-local Codex config
 ```
 
 To add a new governed capability, create one focused module under `guards/`
 that returns either `None` or a denial reason, then register it in the relevant
 tool route in `pre_tool_guard.py`. Do not add domain policy back into the entrypoint.
 
-Do not manually maintain `[[hooks.*]]` entries in the user-level Codex config. Update `hook-registry.json`, then run `sync-hooks.ps1`; the config is only a generated runtime projection.
+Do not manually maintain `[[hooks.*]]` entries in any Codex config. Update
+`hook-registry.json`, then run `sync-hooks.ps1`; `__WORKSPACE_ROOT__\.codex\config.toml`
+is only a generated workspace-local runtime projection. The user-level Codex
+config should not bind this workspace's governance hooks.
+
+Claude Code uses the workspace-local `__WORKSPACE_ROOT__\.claude\settings.local.json`.
+Do not register this workspace guard in the user-level Claude settings.
 
 After installing the template, add regression tests beside the guard before
 introducing a new policy domain. Tests must pass synthetic Hook events and must
 not execute candidate Git or database commands.
 
-The directory name remains `agent-guard` for compatibility with existing Codex
-configuration paths, but the guard is shared by Codex and Claude Code when both
-tools register this hook.
+The directory name remains `agent-guard` to avoid coupling the governance
+concept to one Agent runtime. The guard is shared by Codex and Claude Code when
+both tools register this hook in their workspace-local configuration:
+
+- Codex: `__WORKSPACE_ROOT__\.codex\config.toml`
+- Claude Code: `__WORKSPACE_ROOT__\.claude\settings.local.json`
 
 ## Temporary maintenance approval
 
@@ -50,12 +62,15 @@ required: the guard reloads the switch for each call.
 
 The guard blocks:
 
-- agent edits to its own policy, the Claude/Codex hook registration, the workspace
-  database target configuration, and the database wrapper scripts;
+- agent edits to its own policy, the workspace-local Claude/Codex hook
+  registration, the workspace database target configuration, and the database
+  wrapper scripts;
 - direct `mysql`/`mariadb` shell usage;
 - destructive or sensitive ad-hoc SQL passed to the workspace DB wrapper.
 - direct `git worktree add/remove`; worktree lifecycle must go through the workspace
   scripts so Serena and workspace state are handled consistently;
+- Agent invocations of the worktree create/remove scripts without `-OutputFormat Json`;
+  the resulting `workflow-result.v1` is the required machine-readable evidence.
 - destructive Git operations including branch deletion, `reset --hard`, forced
   clean, force/delete push, and `git init` in the `__WORKSPACE_ROOT__` root.
 

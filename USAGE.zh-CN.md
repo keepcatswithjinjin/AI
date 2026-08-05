@@ -37,39 +37,43 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 
 ## 4. 注册治理 Hook
 
-治理守卫读取 stdin JSON，并以 `PreToolUse` 的拒绝决策阻断操作。它会限制自身策略、数据库入口、直连 MySQL、写 SQL、敏感字段、锁定和诊断类查询。
+治理守卫读取 stdin JSON，并以 `PreToolUse` 的拒绝决策阻断操作。它会限制自身策略、工作站本地 Hook 配置、数据库入口、直连 MySQL、写 SQL、敏感字段、锁定和诊断类查询。
 
 ### Codex
 
-确保用户级 `config.toml` 的 `[features]` 中存在 `hooks = true`。随后执行安装后工作区中的：
+安装脚本会生成工作站本地配置：
+
+```text
+<WorkspaceRoot>\.codex\config.toml
+```
+
+该文件启用 `hooks = true`，并指向当前工作站的 `governance\agent-guard\pre_tool_guard.py` 与 `post_tool_guard.py`。用户级 `~/.codex/config.toml` 不需要绑定某个工作站的治理 Hook；用户级配置只保留个人默认。
+
+调整 Codex Hook 时，先修改：
+
+```text
+<WorkspaceRoot>\governance\agent-guard\hook-registry.json
+```
+
+再在工作站根目录执行：
 
 ```powershell
 .\governance\agent-guard\sync-hooks.ps1
 ```
 
-该脚本从 `governance\agent-guard\hook-registry.json` 生成用户级配置的受管 Hook 区块，包含 PreToolUse 与只校验 worktree 生命周期的 PostToolUse。不要手工维护 `[[hooks.*]]`。
+该脚本只同步到 `<WorkspaceRoot>\.codex\config.toml`，不要手工维护 `[[hooks.*]]`。
 
 ### Claude Code
 
-在 `~/.claude/settings.json` 的根对象合并：
+安装脚本会生成工作站本地配置：
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [{
-      "matcher": "Bash|Edit|Write",
-      "hooks": [{
-        "type": "command",
-        "command": "python \"D:\\Workspace\\governance\\agent-guard\\pre_tool_guard.py\"",
-        "shell": "powershell",
-        "timeout": 10
-      }]
-    }]
-  }
-}
+```text
+<WorkspaceRoot>\.claude\settings.local.json
 ```
 
-重启对应 Agent 后，以安全查询、非法目标和受保护文件修改分别验证允许与拒绝行为。
+该文件注册 `PreToolUse` 与 `PostToolUse`，并指向当前工作站的同一套 `agent-guard`。不要把某个工作站的治理 Hook 写入 `~/.claude/settings.json`。
+
+重启或新开从工作站根目录进入的 Agent 后，以安全查询、非法目标、危险 Git、缺少 `-OutputFormat Json` 的 worktree 脚本和受保护文件修改分别验证允许与拒绝行为。
 
 ## 5. Serena / Java 配置边界
 

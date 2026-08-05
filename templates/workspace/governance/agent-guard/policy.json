@@ -1,10 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "protected_paths": [
     "__WORKSPACE_ROOT__/governance/agent-guard/**",
     "__WORKSPACE_ROOT__/scripts/db-targets.json",
     "__WORKSPACE_ROOT__/scripts/db-analysis.cmd",
     "__WORKSPACE_ROOT__/scripts/db-analysis.ps1",
+    "__WORKSPACE_ROOT__/.codex/config.toml",
+    "__WORKSPACE_ROOT__/.claude/settings.local.json",
     "**/.codex/config.toml",
     "**/.claude-governance/**"
   ],
@@ -27,6 +29,12 @@
     "deny_force_or_delete_push": true,
     "deny_workspace_root_init": true,
     "worktree_create_entrypoint": "__WORKSPACE_ROOT__/scripts/new-worktree.cmd",
-    "worktree_remove_entrypoint": "__WORKSPACE_ROOT__/scripts/remove-worktree.cmd"
+    "worktree_remove_entrypoint": "__WORKSPACE_ROOT__/scripts/remove-worktree.cmd",
+    "json_result_entrypoints": [
+      "__WORKSPACE_ROOT__/scripts/new-worktree.cmd",
+      "__WORKSPACE_ROOT__/scripts/new-worktree.ps1",
+      "__WORKSPACE_ROOT__/scripts/remove-worktree.cmd",
+      "__WORKSPACE_ROOT__/scripts/remove-worktree.ps1"
+    ]
   }
 }

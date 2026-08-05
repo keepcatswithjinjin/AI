@@ -83,7 +83,7 @@ feature 还是 hotfix？
 - 默认不启用 Serena，除非用户明确选择或本次需求已判断为复杂需求且用户确认需要。
 - Serena 只允许在项目根或 worktree 根目录启用，禁止在 `__WORKSPACE_ROOT__` 根目录启用，避免将整个多项目工作区建索引。
 - 若 worktree 根目录下 `.codex/` 不存在，则创建 `.codex/`；若 `.codex/config.toml` 不存在，则新增。
-- 若 `.codex/config.toml` 已存在，只追加或补全 Serena MCP 配置，不覆盖已有项目级配置；尤其不得重写全局治理 hooks。
+- 若 `.codex/config.toml` 已存在，只追加或补全 Serena MCP 配置，不覆盖已有项目级配置；尤其不得重写工作站治理 hooks。
 - Serena 配置用于桌面端新开到该 worktree 目录的 task；在 `__WORKSPACE_ROOT__` 根 session 中创建 worktree 后，本 session 不会自动加载新 worktree 的项目级配置。
 
 推荐写入内容：

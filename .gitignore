@@ -7,6 +7,7 @@ local/
 **/workspace-state.json
 **/maintenance-approval.json
 **/*.local.json
+!templates/workspace/.claude/settings.local.json
 *.env
 
 # Python runtime artefacts

@@ -16,6 +16,7 @@
 | `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | 数据库结构查询和分析 | 查看 MySQL 库、表、字段和建表语句 |
 | `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | Worktree 删除入口 | 删除 worktree、清理可归属 Serena 索引 |
 | `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 功能分支发布入口 | 提交指定文件、合入指定测试/集成分支、成功后恢复源分支 |
+| `governance/agent-guard/README.md` | 跨 Agent 治理说明 | 查看 Codex / Claude 工作站本地 Hook、防护路径和 SQL 策略 |
 | `rules/INDEX.md` | 规则文件索引与维护清单 | 修改任一规则文件前后 |
 | `rules/worktree.md` | 根项目注册表、worktree 创建/删除规则 | 创建、删除、迁移 worktree |
 | `rules/task-lifecycle.md` | 新需求初始化流程 | 开始新需求 |
@@ -42,6 +43,7 @@
 | 调整交接要求 | `rules/handoff.md`、`CLAUDE.md` / `AGENTS.md` 如路由变化 |
 | 新增规则文件 | `STRUCTURE.md`、`rules/INDEX.md`、`README.md`、`CLAUDE.md` / `AGENTS.md` 操作路由 |
 | 新增根目录工具入口 | `STRUCTURE.md`、`README.md`、`CLAUDE.md` / `AGENTS.md`，必要时本文件 |
+| 调整跨 Agent 治理 Hook 或策略 | `STRUCTURE.md`、`governance/agent-guard/README.md`、`.codex/config.toml`、`.claude/settings.local.json` |
 
 ---
 
@@ -52,4 +54,5 @@
 - 修改规则后，先检查本文件确认同步面。
 - `briefs/INDEX.md` 不登记简单需求，只登记已有方案文档的复杂需求。
 - 不维护 Agent 会话恢复状态；代码位置和分支只在 `briefs/WORKTREE-INDEX.md` 维护。
+- Codex / Claude 的工作站治理 Hook 只维护在工作站 local 配置；用户级配置只放个人默认，不绑定具体工作站。
 

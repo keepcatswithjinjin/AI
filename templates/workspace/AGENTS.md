@@ -59,7 +59,7 @@
 | 检查脚本目录 | `scripts/INDEX.md` | 了解当前脚本、状态文件和执行入口 |
 | 提交并合入指定测试/集成分支 | `scripts/INDEX.md` | 使用受控脚本发布当前功能分支，先预览再执行 |
 | 检查规则维护点 | `rules/INDEX.md` | 判断规则变更需要同步哪些文档 |
-| 查看跨 Agent 治理 | `governance/agent-guard/README.md` | Codex / Claude Hook、防护路径和 SQL 策略；受保护文件仅允许人工修改 |
+| 查看跨 Agent 治理 | `governance/agent-guard/README.md` | Codex / Claude 工作站本地 Hook、防护路径和 SQL 策略；受保护文件仅允许人工修改 |
 | 查看 Git/worktree 状态 | `scripts/git-dashboard.cmd` | 自动扫描注册项目、worktree 分支、测试分支占用 |
 | 查询数据库结构 | `scripts/INDEX.md` | 根据本地数据库目标配置执行只读分析 |
 | 查看需求代码位置 | `briefs/WORKTREE-INDEX.md` | 查看 brief 对应的前端/后端代码位置和分支 |

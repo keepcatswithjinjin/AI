@@ -7,14 +7,15 @@
 ## 包含内容
 
 - `templates/workspace/`：可实例化的工作区规则、脚本与 Agent 入口文件。
-- `templates/workspace/governance/agent-guard/`：Codex 与 Claude Code 共用的 `PreToolUse` 治理守卫。
+- `templates/workspace/.codex/` 与 `.claude/`：工作站本地 Hook 注册模板。
+- `templates/workspace/governance/agent-guard/`：Codex 与 Claude Code 共用的治理守卫。
 - `skills/db-analysis/`：不含凭据的 MySQL 只读分析 skill。
 - `install.ps1`：把模板渲染到指定的工作区根目录。
 - `USAGE.zh-CN.md`：安装、Hook 注册、本地数据库配置和维护说明。
 
 ## 边界
 
-不要把业务项目、worktree、真实数据库配置、个人 session 状态或 Agent 用户配置提交到本仓库。详细说明见 [使用指南](USAGE.zh-CN.md)。
+不要把业务项目、worktree、真实数据库配置、个人 session 状态或 Agent 用户级配置提交到本仓库。详细说明见 [使用指南](USAGE.zh-CN.md)。
 
 ## 快速开始
 
@@ -23,4 +24,4 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 .\install.ps1 -WorkspaceRoot D:\Workspace
 ```
 
-之后按使用指南将 Codex 和 Claude Code 的 Hook 指向 `D:\Workspace\governance\agent-guard\pre_tool_guard.py`。
+安装后从 `D:\Workspace` 根目录打开 Codex / Claude Code；工作站本地 `.codex` 与 `.claude` 会把 Hook 指向 `D:\Workspace\governance\agent-guard`。如工具提示需要信任本地 Hook，人工确认后生效。

@@ -11,12 +11,20 @@ from guard_utils import matches
 ROOT = Path(r"__WORKSPACE_ROOT__")
 POLICY_PATH = ROOT / "governance" / "agent-guard" / "policy.json"
 MAINTENANCE_APPROVAL_PATH = ROOT / "governance" / "agent-guard" / "maintenance-approval.json"
+
+
+def root_pattern(*parts: str) -> str:
+    return ROOT.joinpath(*parts).as_posix().lower()
+
+
 BASELINE_PROTECTED = [
-    "d:/col/governance/agent-guard/**",
-    "d:/col/scripts/db-targets.json",
-    "d:/col/scripts/db-analysis.cmd",
-    "d:/col/scripts/db-analysis.ps1",
-    "d:/col/governance/agent-guard/maintenance-approval.json",
+    root_pattern("governance", "agent-guard", "**"),
+    root_pattern("scripts", "db-targets.json"),
+    root_pattern("scripts", "db-analysis.cmd"),
+    root_pattern("scripts", "db-analysis.ps1"),
+    root_pattern(".codex", "config.toml"),
+    root_pattern(".claude", "settings.local.json"),
+    root_pattern("governance", "agent-guard", "maintenance-approval.json"),
 ]
 
 

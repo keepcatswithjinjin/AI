@@ -15,6 +15,8 @@
 | `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 受控删除 worktree，并清理可归属 Serena 索引 |
 | `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 受控提交当前功能分支指定文件、合入指定分支并恢复功能分支 |
 | `scripts/INDEX.md` | scripts 目录索引，说明脚本和状态文件职责 |
+| `.codex/config.toml` | Codex 工作站本地 Hook 注册入口 |
+| `.claude/settings.local.json` | Claude Code 工作站本地 Hook 注册入口 |
 | `rules/` | 公共流程规则，避免根入口膨胀 |
 | `governance/agent-guard/` | Codex / Claude Code 共用 Hook 与受保护路径、SQL 治理策略 |
 | `scripts/` | 自动化脚本和本地数据库目标配置 |
@@ -48,6 +50,7 @@
 - `__WORKSPACE_ROOT__` 是工作区容器，不作为 Git 仓库管理；Git 操作仅在登记项目及其 worktree 内执行。
 - 根目录 session 只做设计和调度，不写业务代码。
 - 根目录允许运行只读 Git 仪表盘，用于查看项目、worktree、测试分支占用；看板查询不需要额外总结。
+- Codex / Claude Code 的工作站治理 Hook 只注册在当前工作站 local 配置中，不写入用户级配置。
 - 新需求默认使用 `worktrees/<原项目目录名>-worktree/<需求名>`。
 - 新增 worktree 优先使用 `scripts\new-worktree.cmd`，不要手写底层 Git 创建命令。
 - 复杂需求的 `需求名 = brief 文件夹名 = worktree 目录名`。

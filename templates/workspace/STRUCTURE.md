@@ -19,6 +19,8 @@
 | `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 工具入口 | 受控提交功能分支指定文件、合入指定分支并恢复功能分支 | 随脚本维护 |
 | `scripts/INDEX.md` | 脚本索引 | 说明 scripts 内脚本和状态文件职责 | 手工维护 |
 | `vibe-coding-新项目初始化指南.md` | 流程指南 | 新项目接入当前工作区 | 手工维护 |
+| `.codex/config.toml` | 工作站本地配置 | Codex 在本工作站的 Hook 注册入口，不承载用户级默认配置 | 由 `governance/agent-guard/sync-hooks.ps1` 维护 |
+| `.claude/settings.local.json` | 工作站本地配置 | Claude Code 在本工作站的 Hook 注册入口，不写入用户级配置 | 手工维护，仅人工修改受保护文件 |
 | `rules/` | 规则目录 | 设计、需求、worktree、交接规则 | 手工维护 |
 | `governance/agent-guard/` | 跨 Agent 全局治理 | Codex / Claude Hook、跨项目受保护路径/SQL 策略，以及人工签发的临时维护审批 | 手工维护，仅人工修改受保护文件 |
 | `rules/INDEX.md` | 规则索引 | rules 内部文件职责和同步触发 | 手工维护 |
@@ -41,6 +43,8 @@
 | Worktree 创建入口 | `scripts/new-worktree.ps1` | 从 `rules/worktree.md` 读取项目注册表并统一创建 worktree |
 | 数据库目标配置 | `scripts/db-targets.json` | 只记录本地数据库连接目标，不复制到项目内 |
 | 跨 Agent 治理策略 | `governance/agent-guard/policy.json` | 定义受保护路径、高风险路径和 SQL 防护策略 |
+| Codex Hook 注册 | `.codex/config.toml` | 由 `governance/agent-guard/hook-registry.json` 生成，不在用户级 Codex 配置维护工作站治理 |
+| Claude Hook 注册 | `.claude/settings.local.json` | 仅在当前工作站本地维护，不写入用户级 Claude 配置 |
 | Brief 对应代码位置和分支 | `briefs/WORKTREE-INDEX.md` | 不在交接文档或会话状态中重复维护 |
 | Worktree 删除入口 | `scripts/remove-worktree.ps1` | 统一执行删除前检查和 Serena 可归属索引清理 |
 | 功能分支发布入口 | `scripts/publish-to-branch.ps1` | 统一执行文件范围检查、源分支推送、目标分支合并与恢复源分支 |
@@ -81,6 +85,7 @@ __WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>
 | 新增规则文件 | `rules/INDEX.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
 | 新增或调整根工具入口 | `README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md`、必要时 `rules/INDEX.md` |
 | 调整脚本目录结构 | `scripts/INDEX.md`、`README.md`、`STRUCTURE.md` |
+| 调整跨 Agent 治理 Hook 或策略 | `governance/agent-guard/README.md`、`.codex/config.toml`、`.claude/settings.local.json`、`governance/agent-guard/policy.json` |
 | 新增复杂需求 | `briefs/INDEX.md`、对应 `briefs/<类型>/<需求名>/` |
 | 创建、删除或迁移需求 worktree | `briefs/WORKTREE-INDEX.md`、必要时 `briefs/INDEX.md` |
 | 调整设计方案格式 | `rules/design.md`、`rules/task-lifecycle.md`、`STRUCTURE.md` |
@@ -97,3 +102,4 @@ __WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>
 - 简单需求不进入 `briefs/INDEX.md`。
 - 不维护 Agent 会话恢复状态；需求对应代码位置和分支只维护在 `briefs/WORKTREE-INDEX.md`。
 - `__WORKSPACE_ROOT__` 根目录是工作区容器，不作为 Git 仓库管理；Git 操作仅在登记项目及其 worktree 内执行。
+- Codex / Claude 工作站治理 Hook 只维护在工作站本地配置中；用户级配置不得绑定某个工作站的专属治理。

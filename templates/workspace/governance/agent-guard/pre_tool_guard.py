@@ -69,7 +69,7 @@ def main() -> None:
         command = tool_input.get("command", "")
         if isinstance(command, str):
             route_bash(command, policy, cwd)
-    elif tool_name in ("Edit", "Write"):
+    elif tool_name in ("Edit", "Write", "MultiEdit"):
         deny_if(check_edit_or_write(tool_input, policy))
 
 

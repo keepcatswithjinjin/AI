@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"__WORKSPACE_ROOT__\\governance\\agent-guard\\pre_tool_guard.py\"",
+            "timeout": 10000,
+            "statusMessage": "Checking workspace governance policy"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"__WORKSPACE_ROOT__\\governance\\agent-guard\\post_tool_guard.py\"",
+            "timeout": 10000,
+            "statusMessage": "Verifying worktree lifecycle result"
+          }
+        ]
+      }
+    ]
+  }
+}

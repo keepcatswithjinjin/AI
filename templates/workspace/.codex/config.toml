@@ -1,0 +1,24 @@
+[features]
+hooks = true
+
+# >>> workspace-governance-hooks (generated; source: __WORKSPACE_ROOT__\governance\agent-guard\hook-registry.json)
+
+[[hooks.PreToolUse]]
+matcher = "Bash|apply_patch|Edit|Write"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = 'python "__WORKSPACE_ROOT__\governance\agent-guard\pre_tool_guard.py"'
+timeout = 10
+statusMessage = "Checking workspace governance policy"
+
+[[hooks.PostToolUse]]
+matcher = "Bash"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = 'python "__WORKSPACE_ROOT__\governance\agent-guard\post_tool_guard.py"'
+timeout = 10
+statusMessage = "Verifying worktree lifecycle result"
+
+# <<< workspace-governance-hooks
