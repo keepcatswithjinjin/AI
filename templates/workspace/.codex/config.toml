@@ -1,6 +1,14 @@
 [features]
 hooks = true
 
+# Optional Yunxiao MCP. Enable after creating:
+# - __WORKSPACE_ROOT__\.codex\secrets\yunxiao.env.cmd
+# - __WORKSPACE_ROOT__\.codex\secrets\yunxiao.personal.json
+#
+# [mcp_servers.yunxiao]
+# command = '__WORKSPACE_ROOT__\.codex\mcp\yunxiao-mcp.cmd'
+# startup_timeout_sec = 120
+
 # >>> workspace-governance-hooks (generated; source: __WORKSPACE_ROOT__\governance\agent-guard\hook-registry.json)
 
 [[hooks.PreToolUse]]

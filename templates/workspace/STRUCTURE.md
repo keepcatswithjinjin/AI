@@ -13,8 +13,11 @@
 | `AGENTS.md` | Agent 入口 | Codex/通用 Agent 在根目录的操作路由 | 手工维护 |
 | `scripts/git-dashboard.cmd` / `scripts/git-dashboard.ps1` | 工具入口 | Windows 下查看 Git/worktree 状态 | 随脚本维护 |
 | `scripts/new-worktree.cmd` / `scripts/new-worktree.ps1` | 工具入口 | Windows 下受控新增 worktree，并按需写入 Serena 配置 | 随脚本维护 |
-| `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | 工具入口 | Windows 下查询 MySQL 数据库结构和分析 SQL | 随脚本维护 |
-| `scripts/db-targets.json` | 本地状态 | 记录常用数据库连接目标 | 手工维护 |
+| `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | 可选工具入口 | Windows 下查询 MySQL 数据库结构和分析 SQL | 启用数据库能力时随脚本维护 |
+| `scripts/db-targets.json` | 可选本地状态 | 记录常用数据库连接目标 | 手工维护，不提交 |
+| `.codex/mcp/yunxiao-mcp.cmd` | 可选工具入口 | 启动工作站本地云效 MCP | 启用云效能力时随模板维护 |
+| `.codex/secrets/yunxiao.env.cmd` | 可选本地状态 | 记录云效 token 环境变量 | 手工维护，不提交 |
+| `.codex/secrets/yunxiao.personal.json` | 可选本地状态 | 记录个人云效组织、项目、别名和可选流水线白名单 | 手工维护，不提交 |
 | `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 工具入口 | 受控删除 worktree，并清理可归属 Serena 索引 | 随脚本维护 |
 | `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 工具入口 | 受控提交功能分支指定文件、合入指定分支并恢复功能分支 | 随脚本维护 |
 | `scripts/INDEX.md` | 脚本索引 | 说明 scripts 内脚本和状态文件职责 | 手工维护 |
@@ -44,6 +47,7 @@
 | Git/worktree 状态扫描 | `scripts/git-dashboard.ps1` | 项目列表从 `rules/worktree.md` 自动读取 |
 | Worktree 创建入口 | `scripts/new-worktree.ps1` | 从 `rules/worktree.md` 读取项目注册表并统一创建 worktree |
 | 数据库目标配置 | `scripts/db-targets.json` | 只记录本地数据库连接目标，不复制到项目内 |
+| 云效个人配置 | `.codex/secrets/yunxiao.personal.json` | 只记录个人组织/项目路由与可选流水线白名单，不复制到项目内 |
 | 跨 Agent 治理策略 | `governance/agent-guard/policy.json` | 定义受保护路径、高风险路径和 SQL 防护策略 |
 | Codex Hook 注册 | `.codex/config.toml` | 由 `governance/agent-guard/hook-registry.json` 生成，不在用户级 Codex 配置维护工作站治理 |
 | Claude Hook 注册 | `.claude/settings.local.json` | 仅在当前工作站本地维护，不写入用户级 Claude 配置 |

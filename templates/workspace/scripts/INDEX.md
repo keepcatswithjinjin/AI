@@ -9,7 +9,7 @@
 `__WORKSPACE_ROOT__\scripts` 只存放：
 
 - 可执行脚本入口（`.cmd` / `.ps1`）
-- 本地数据库目标配置（`db-targets.json`）
+- 可选本地数据库目标配置（启用 db-analysis 后的 `db-targets.json`）
 
 不存放：
 
@@ -27,9 +27,9 @@
 | `git-dashboard.ps1` | Git 看板主脚本 | 调整看板逻辑、字段、过滤规则时 |
 | `new-worktree.cmd` | Windows 入口，按注册表创建 worktree，并按需写入 Serena 配置 | 新增需求 worktree |
 | `new-worktree.ps1` | Worktree 创建主脚本 | 调整创建流程、分支规则或 Serena 写入逻辑时 |
-| `db-analysis.cmd` | Windows 入口，查询 MySQL 库结构和自定义 SQL | 想快速查库、查表、查字段、看建表语句 |
-| `db-analysis.ps1` | 工作区快捷 wrapper，转调全局 `db-analysis` skill 脚本 | 调整默认配置路径时 |
-| `db-targets.json` | 本地数据库目标配置 | 维护常用数据库连接目标 |
+| `db-analysis.cmd` | 可选：Windows 入口，查询 MySQL 库结构和自定义 SQL | 启用 db-analysis 后，想快速查库、查表、查字段、看建表语句 |
+| `db-analysis.ps1` | 可选：工作区快捷 wrapper，转调全局 `db-analysis` skill 脚本 | 启用 db-analysis 后，调整默认配置路径时 |
+| `db-targets.json` | 可选：本地数据库目标配置 | 启用 db-analysis 后，维护常用数据库连接目标 |
 | `remove-worktree.cmd` | Windows 入口，受控删除 worktree 并清理可归属 Serena 索引 | 删除需求 worktree |
 | `remove-worktree.ps1` | Worktree 删除主脚本 | 调整删除前检查或 Serena 清理逻辑时 |
 | `publish-to-branch.cmd` | Windows 入口，将当前功能分支的指定文件提交、推送并受控合入指定远端分支 | 功能完成后提交并合入测试/集成分支 |
@@ -72,7 +72,9 @@
 - `-Serena Enable` 会在新 worktree 根目录写入项目级 `.codex/config.toml`。
 - Serena 命令必须使用已验证的可执行文件绝对路径，不自动回退到裸 `serena`。
 
-### 3.3 数据库分析
+### 3.3 数据库分析（可选）
+
+本节只有初始化工作站时传入 `-IncludeDbAnalysis` 后才适用。未安装时，`scripts\db-analysis.cmd`、`scripts\db-analysis.ps1` 和 `scripts\db-targets.example.json` 不存在；Agent 应说明 db-analysis 可选能力未启用，不要自行猜测数据库入口。
 
 常用命令：
 
@@ -142,7 +144,7 @@
 
 - 查看当前脚本有哪些
 - 判断某个脚本该怎么用
-- 查询数据库结构或执行只读分析 SQL
+- 查询数据库结构或执行只读分析 SQL（仅启用 db-analysis 后）
 - 修改脚本结构
 - 调整 Git 看板逻辑
 
@@ -150,8 +152,8 @@
 
 - 查看 Git/worktree 状态：执行 `.\scripts\git-dashboard.cmd -Board`
 - 新增 worktree：先执行 `.\scripts\new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview`，确认后再执行不带 `-Preview` 的创建命令
-- 查询数据库目标：执行 `.\scripts\db-analysis.cmd -ListTargets`
-- 查询数据库结构：执行 `.\scripts\db-analysis.cmd -Target <name> -Action tables|columns|create`
+- 查询数据库目标：若已启用 db-analysis，执行 `.\scripts\db-analysis.cmd -ListTargets`
+- 查询数据库结构：若已启用 db-analysis，执行 `.\scripts\db-analysis.cmd -Target <name> -Action tables|columns|create`
 - 删除 worktree：先执行 `.\scripts\remove-worktree.cmd -WorktreePath <worktree路径> -Preview`，确认后再执行不带 `-Preview` 的删除命令
 - 创建 worktree 并启用 Serena：按 `rules/worktree.md` 写入项目级 `.codex/config.toml`，Serena 命令必须使用已验证的可执行文件绝对路径，不自动回退到裸 `serena`
 - 提交并合入指定测试/集成分支：先执行 `.\scripts\publish-to-branch.cmd ... -Preview`，确认后再去掉 `-Preview`；不要手写 checkout / merge / push 绕过脚本
@@ -165,7 +167,7 @@
 原因：
 
 - 当前文件数量少
-- 只有少量脚本：Git 看板、数据库分析、worktree 维护
+- 只有少量脚本：Git 看板、worktree 维护，以及可选数据库分析
 - 再拆 `git/`、`workspace/` 会增加路径层级，但不会明显降低复杂度
 
 当脚本数量继续增长，再考虑拆分：

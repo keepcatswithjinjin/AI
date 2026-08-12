@@ -4,10 +4,14 @@ local/
 
 # Credentials and personal workspace state
 **/db-targets.json
+**/yunxiao.env.cmd
+**/yunxiao.personal.json
 **/workspace-state.json
 **/maintenance-approval.json
 **/*.local.json
 !templates/workspace/.claude/settings.local.json
+!**/*.example.json
+!**/*.example.cmd
 *.env
 
 # Python runtime artefacts

@@ -1,0 +1,3 @@
+display_name: Yunxiao Workstation
+short_description: Manage Yunxiao work items and optional pipelines through workspace-local MCP.
+default_prompt: Read or manage Yunxiao work items using the workspace-local configuration.

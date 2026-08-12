@@ -61,7 +61,8 @@
 | 检查规则维护点 | `rules/INDEX.md` | 判断规则变更需要同步哪些文档 |
 | 查看跨 Agent 治理 | `governance/agent-guard/README.md` | Codex / Claude 工作站本地 Hook、防护路径和 SQL 策略；受保护文件仅允许人工修改 |
 | 查看 Git/worktree 状态 | `scripts/git-dashboard.cmd` | 自动扫描注册项目、worktree 分支、测试分支占用 |
-| 查询数据库结构 | `scripts/INDEX.md` | 根据本地数据库目标配置执行只读分析 |
+| 查询数据库结构 | `scripts/INDEX.md` | 可选能力；安装了 db-analysis 后，根据本地数据库目标配置执行只读分析 |
+| 查询或维护云效任务/需求/流水线 | `.codex/skills/yunxiao-workstation/SKILL.md` | 可选能力；安装了 Yunxiao 后，使用工作站本地 `yunxiao` MCP |
 | 查看需求代码位置 | `briefs/WORKTREE-INDEX.md` | 查看 brief 对应的前端/后端代码位置和分支 |
 | 设计方案 | `rules/design.md` | 方案章节、接口原则、前后端协作、检查清单 |
 | 开始新需求 | `rules/task-lifecycle.md` | 判断简单/复杂需求，创建 briefs 结构和执行入口 |
@@ -97,12 +98,14 @@
 .\scripts\git-dashboard.cmd -Detailed
 ```
 
-当用户要求“查数据库 / 查表结构 / 查字段 / 看建表语句 / 执行只读 SQL 分析”时，必须先读取 `scripts/INDEX.md`，然后按目标执行：
+当用户要求“查数据库 / 查表结构 / 查字段 / 看建表语句 / 执行只读 SQL 分析”时，必须先读取 `scripts/INDEX.md`。如果当前工作站未安装 db-analysis 可选能力，说明未启用并给出安装提示；如果已安装，则按目标执行：
 
 ```powershell
 .\scripts\db-analysis.cmd -ListTargets
 .\scripts\db-analysis.cmd -Target <name> -Action tables
 ```
+
+当用户要求“查云效任务 / 查工作项 / 查需求 / 查迭代 / 创建或更新云效工作项 / 查看流水线”时，先检查 `.codex/skills/yunxiao-workstation/SKILL.md` 是否存在。若不存在，说明 Yunxiao 可选能力未启用；若存在，必须先读取该 skill，再使用工作站本地 `yunxiao` MCP。不要把云效 token 写入回复、提交信息或共享文档。创建、更新、评论、状态流转或运行流水线前必须先展示中文预案并等待人工确认。流水线自动化默认未启用；只有本地个人配置白名单中的流水线才允许执行。
 
 当用户要求“某个需求对应哪个前端/后端目录、哪个分支”时，必须读取 `briefs/WORKTREE-INDEX.md`。不要从 Agent 会话名、交接文档或历史状态文件推断当前代码位置。
 
