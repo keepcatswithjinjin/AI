@@ -7,7 +7,7 @@
 ```text
 D:\AI-Toolkit\multi-project-workstation\   # 本仓库，受 Git 管理
 D:\Workspace\                               # 安装后的工作区容器，不初始化 Git
-  rules/ scripts/ governance/ briefs/
+  rules/ scripts/ governance/ briefs/ artifacts/
   worktrees/                            # 各项目 worktree 的统一容器
   project-a\                               # 独立 Git 仓库
   project-b\                               # 独立 Git 仓库
@@ -16,7 +16,7 @@ D:\Workspace\                               # 安装后的工作区容器，不�
 
 不要在工作区根目录执行 `git init` 或 `git add .`。项目 Git 操作只在项目根目录或其 worktree 中执行。
 
-跨项目方案、接口契约和执行交接统一放在工作站的 `briefs/`，不依赖项目内的自定义任务目录。需求对应的前端/后端代码位置和分支维护在 `briefs/WORKTREE-INDEX.md`。
+跨项目方案、接口契约和执行交接统一放在工作站的 `briefs/`，不依赖项目内的自定义任务目录。需求对应的前端/后端代码位置和分支维护在 `briefs/WORKTREE-INDEX.md`。需要长期保存或跨项目复用的文件产物放在 `artifacts/`，不要用它推断需求状态或分支。
 
 ## 2. 安装模板
 

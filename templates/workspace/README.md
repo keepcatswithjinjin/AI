@@ -22,6 +22,7 @@
 | `scripts/` | 自动化脚本和本地数据库目标配置 |
 | `briefs/` | 复杂需求的设计方案、接口契约、前后端计划 |
 | `briefs/WORKTREE-INDEX.md` | 需求 brief 对应的代码位置与分支索引 |
+| `artifacts/` | 需要长期保存或跨项目复用的文件产物，不承载需求状态 |
 | `worktrees/` | 新 worktree 的统一根目录 |
 | `<项目>/` | 主项目仓库，只保留稳定主工作区 |
 
@@ -34,6 +35,7 @@
 | 查看 Git/worktree 状态 | `scripts\git-dashboard.cmd -Board` |
 | 新增 worktree | `scripts\new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` |
 | 查询数据库结构 | `scripts\db-analysis.cmd -ListTargets` |
+| 保存或查找文件产物 | `artifacts\README.md` |
 | 删除 worktree | `scripts\remove-worktree.cmd -WorktreePath <路径> -Preview` |
 | 提交并合入指定测试/集成分支 | `scripts\publish-to-branch.cmd -TargetBranch <分支> -Files <逗号分隔文件> -CommitMessage <信息> -Preview` |
 | 查看需求对应代码位置和分支 | `briefs\WORKTREE-INDEX.md` |
@@ -55,6 +57,7 @@
 - 新增 worktree 优先使用 `scripts\new-worktree.cmd`，不要手写底层 Git 创建命令。
 - 复杂需求的 `需求名 = brief 文件夹名 = worktree 目录名`。
 - 需求对应的前端/后端代码位置和分支只维护在 `briefs\WORKTREE-INDEX.md`；不维护 Agent 会话恢复状态。
+- `artifacts/` 只保存需要沉淀的文件产物，不用来推断需求状态、代码位置或分支。
 - 简单需求可直接创建 worktree 执行，不进入 `briefs/INDEX.md`。
 - 新增 worktree 若启用 Serena，必须按 `rules/worktree.md` 写入项目级 `.codex/config.toml`，并使用已验证的 Serena 可执行文件绝对路径。
 - 需求方案设计或复杂代码理解中，如需要大量查询函数、类、引用、调用关系，可优先考虑在启用 Serena 的 worktree 中使用 Serena；文本检索和简单定位仍可使用 `rg`。

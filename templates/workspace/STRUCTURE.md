@@ -28,6 +28,8 @@
 | `briefs/` | 需求简报目录 | 复杂需求方案、接口契约、执行计划 | 按需求维护 |
 | `briefs/INDEX.md` | 需求简报索引 | 已产出方案文档的需求列表 | 按复杂需求维护 |
 | `briefs/WORKTREE-INDEX.md` | 代码位置索引 | 记录需求 brief 对应的前端/后端代码位置和分支 | 创建、删除、迁移 worktree 时维护 |
+| `artifacts/` | 文件产物目录 | 长期保存或跨项目复用的非源码文件产物 | 按产物维护 |
+| `artifacts/README.md` | 产物目录说明 | 定义 artifacts 的存放边界和命名约束 | 手工维护 |
 | `worktrees/` | Worktree 根目录 | 新 worktree 的统一父目录 | 按注册表维护 |
 | `<项目>/` | 主项目仓库 | 稳定主工作区，执行阶段入口 | 项目自身维护 |
 
@@ -46,6 +48,7 @@
 | Codex Hook 注册 | `.codex/config.toml` | 由 `governance/agent-guard/hook-registry.json` 生成，不在用户级 Codex 配置维护工作站治理 |
 | Claude Hook 注册 | `.claude/settings.local.json` | 仅在当前工作站本地维护，不写入用户级 Claude 配置 |
 | Brief 对应代码位置和分支 | `briefs/WORKTREE-INDEX.md` | 不在交接文档或会话状态中重复维护 |
+| 保存型文件产物 | `artifacts/` | 不进入 `briefs/INDEX.md` 或 `briefs/WORKTREE-INDEX.md`，不用于推断需求状态 |
 | Worktree 删除入口 | `scripts/remove-worktree.ps1` | 统一执行删除前检查和 Serena 可归属索引清理 |
 | 功能分支发布入口 | `scripts/publish-to-branch.ps1` | 统一执行文件范围检查、源分支推送、目标分支合并与恢复源分支 |
 | 脚本目录路由 | `scripts/INDEX.md` | 只做脚本入口说明，不复制脚本实现 |
@@ -85,6 +88,7 @@ __WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>
 | 新增规则文件 | `rules/INDEX.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
 | 新增或调整根工具入口 | `README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md`、必要时 `rules/INDEX.md` |
 | 调整脚本目录结构 | `scripts/INDEX.md`、`README.md`、`STRUCTURE.md` |
+| 调整保存型文件产物目录 | `artifacts/README.md`、`README.md`、`STRUCTURE.md` |
 | 调整跨 Agent 治理 Hook 或策略 | `governance/agent-guard/README.md`、`.codex/config.toml`、`.claude/settings.local.json`、`governance/agent-guard/policy.json` |
 | 新增复杂需求 | `briefs/INDEX.md`、对应 `briefs/<类型>/<需求名>/` |
 | 创建、删除或迁移需求 worktree | `briefs/WORKTREE-INDEX.md`、必要时 `briefs/INDEX.md` |
@@ -100,6 +104,7 @@ __WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>
 - 每个事实只维护在一个唯一真相源。
 - `STRUCTURE.md` 只做地图和检查清单，不复制详细规则。
 - 简单需求不进入 `briefs/INDEX.md`。
+- `artifacts/` 保存文件产物，不承载需求生命周期、代码位置或分支状态。
 - 不维护 Agent 会话恢复状态；需求对应代码位置和分支只维护在 `briefs/WORKTREE-INDEX.md`。
 - `__WORKSPACE_ROOT__` 根目录是工作区容器，不作为 Git 仓库管理；Git 操作仅在登记项目及其 worktree 内执行。
 - Codex / Claude 工作站治理 Hook 只维护在工作站本地配置中；用户级配置不得绑定某个工作站的专属治理。
