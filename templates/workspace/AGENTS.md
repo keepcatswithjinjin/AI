@@ -137,6 +137,10 @@
    Get-ChildItem -Path __WORKSPACE_ROOT__\briefs -Directory -Recurse -Filter "<需求名>"
    ```
 4. **读取方案文件**：按顺序读取 `agent-guide.md`（如存在）→ `需求-agent-guide.md` / `handoff-agent-guide.md`（历史兼容）→ `design.md` → `backend-plan.md`（后端）或 `frontend-plan.md`（前端）
+5. **cross 双角色读取**：如果匹配路径属于 `__WORKSPACE_ROOT__\briefs\cross\<需求名>\`，必须额外读取：
+   - `__WORKSPACE_ROOT__\rules\backend-role-guide.md`
+   - `__WORKSPACE_ROOT__\rules\frontend-role-guide.md`
+   - `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`
 
 强制约束：
 
@@ -144,6 +148,7 @@
 - 项目或 worktree 内的 `tasks/` 不是工作区需求简报入口，禁止用它推断方案路径或前后端执行目录。
 - 项目内 `tasks/lessons.md` 只能作为项目经验教训参考，不能覆盖 `__WORKSPACE_ROOT__\briefs/<类型>/<需求名>/` 下的设计和计划。
 - 新交接文档统一命名为 `agent-guide.md`；历史 `需求-agent-guide.md`、`handoff-agent-guide.md` 只做兼容读取。
+- cross 需求默认由同一个 Agent 承担前端+后端两个角色；通用角色职责只维护在 `rules/backend-role-guide.md` 与 `rules/frontend-role-guide.md`。
 
 > **目的**：Agent 自动发现上下文，用户不再需要手动粘贴方案文件路径。
 

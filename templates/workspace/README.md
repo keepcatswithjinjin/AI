@@ -21,6 +21,7 @@
 | `.codex/config.toml` | Codex 工作站本地 Hook 注册入口 |
 | `.claude/settings.local.json` | Claude Code 工作站本地 Hook 注册入口 |
 | `rules/` | 公共流程规则，避免根入口膨胀 |
+| `rules/backend-role-guide.md` / `rules/frontend-role-guide.md` | cross 需求中同一 Agent 的后端/前端角色职责 |
 | `governance/agent-guard/` | Codex / Claude Code 共用 Hook 与受保护路径、SQL 治理策略 |
 | `scripts/` | 自动化脚本和本地数据库目标配置 |
 | `briefs/` | 复杂需求的设计方案、接口契约、前后端计划 |
@@ -43,6 +44,7 @@
 | 删除 worktree | `scripts\remove-worktree.cmd -WorktreePath <路径> -Preview` |
 | 提交并合入指定测试/集成分支 | `scripts\publish-to-branch.cmd -TargetBranch <分支> -Files <逗号分隔文件> -CommitMessage <信息> -Preview` |
 | 查看需求对应代码位置和分支 | `briefs\WORKTREE-INDEX.md` |
+| 执行 cross 前后端需求 | `rules\backend-role-guide.md` + `rules\frontend-role-guide.md` |
 | 引入新项目 | `vibe-coding-新项目初始化指南.md` |
 | 查看规则维护点 | `rules/INDEX.md` |
 | 查看或人工调整跨 Agent 治理策略 | `governance/agent-guard/README.md` |
@@ -60,6 +62,7 @@
 - 新需求默认使用 `worktrees/<原项目目录名>-worktree/<需求名>`。
 - 新增 worktree 优先使用 `scripts\new-worktree.cmd`，不要手写底层 Git 创建命令。
 - 复杂需求的 `需求名 = brief 文件夹名 = worktree 目录名`。
+- cross 需求默认由同一个 Agent 承担后端+前端两个角色；通用角色职责维护在 `rules/backend-role-guide.md` 与 `rules/frontend-role-guide.md`，不写进每个 brief。
 - 需求对应的前端/后端代码位置和分支只维护在 `briefs\WORKTREE-INDEX.md`；不维护 Agent 会话恢复状态。
 - `artifacts/` 只保存需要沉淀的文件产物，不用来推断需求状态、代码位置或分支。
 - 简单需求可直接创建 worktree 执行，不进入 `briefs/INDEX.md`。

@@ -65,7 +65,18 @@ worktrees/project-web-worktree/order-export/
 
 `api-contract.md` 只在存在接口协作时创建，且必须作为前后端契约唯一真相源。
 
-### 5.1 Agent 交接文档命名
+### 5.1 cross 双角色执行模式
+
+cross 需求默认由同一个 Agent 承担后端+前端两个角色，避免在桌面端多目录切换时拆散上下文。
+
+- 通用后端角色职责固定读取：`__WORKSPACE_ROOT__\rules\backend-role-guide.md`
+- 通用前端角色职责固定读取：`__WORKSPACE_ROOT__\rules\frontend-role-guide.md`
+- 需求特有执行计划仍写在当前 brief 的 `backend-plan.md` / `frontend-plan.md`
+- 代码位置与分支只读取 `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`
+
+不要在每个 `briefs/cross/<需求名>/` 中复制角色定位；只写本需求特有的接口、页面、数据和验证计划。
+
+### 5.2 Agent 交接文档命名
 
 - 统一标准文件名：`agent-guide.md`
 - 适用场景：需要给下一个执行 Agent 明确当前进度、关键决策、继续步骤时

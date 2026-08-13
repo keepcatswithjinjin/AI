@@ -43,9 +43,12 @@ When the user specifies an exact work item number such as `YQPN-205` or `PROJ-12
 
 1. Read the personal config and use `customCode`, project aliases, or organization aliases to resolve candidate projects.
 2. If the config cannot resolve the prefix/project, ask whether to initialize or update the organization/project directory.
-3. Search candidate projects with `search_workitems`; if a result with matching `serialNumber` is found, call `get_work_item` with its internal `id`.
-4. Also read comments, attachments, and activities when the user asks for complete details.
-5. Summarize in implementation-friendly form: background, scope, business rules, acceptance criteria, open questions, and risk points.
+3. Prefer a single `search_workitems` call with `includeDetails: true` in the resolved project and category. Filter returned items by exact `serialNumber`. Do not search the serial number as `subject`; Yunxiao serial numbers are not title text.
+4. Call `get_work_item` only when the exact item cannot be returned with details from `search_workitems`, or when the user already provided an internal work item id.
+5. Do not read comments, attachments, or activities by default. Only call `list_work_item_comments`, `list_workitem_attachments`, or `list_workitem_activities` when the user explicitly asks for comments, attachments, activity history, audit trail, or complete collaboration records.
+6. Summarize in implementation-friendly form: background, scope, business rules, acceptance criteria, open questions, and risk points.
+
+Do not ask for confirmation for read-only detail retrieval. Minimize MCP calls because some clients request approval per MCP tool call. Ask only when multiple exact serial-number matches appear across organizations.
 
 ## Task management workflow
 

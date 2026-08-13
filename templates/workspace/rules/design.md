@@ -66,6 +66,18 @@
 
 ## 前后端协作规范
 
+### 同一 Agent 双角色模式
+
+cross 需求默认由同一个 Agent 承担后端+前端两个角色。
+
+执行或维护 cross 方案时，必须固定读取：
+
+- `__WORKSPACE_ROOT__\rules\backend-role-guide.md`
+- `__WORKSPACE_ROOT__\rules\frontend-role-guide.md`
+- `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`
+
+`backend-plan.md` / `frontend-plan.md` 只写当前需求特有的改动计划，不重复维护通用角色职责。
+
 ### 契约优先
 
 前后端通过 `api-contract.md` 协作，该文件是**唯一真相源**：
@@ -78,7 +90,7 @@
 ```
 1. 需求评审（人）：确定前后端配合点
 2. 接口设计（本 design session）：产出 api-contract.md
-3. 并行开发（各自项目内执行 session）：参考契约独立实现
+3. 执行开发（同一 Agent）：按 backend-role-guide 与 frontend-role-guide 依次处理后端/前端
 4. 联调（人）：各自本地验证，问题反馈回到步骤 2
 ```
 

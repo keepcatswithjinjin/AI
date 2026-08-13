@@ -92,13 +92,28 @@ If the internal work item id is already known, call:
 
 Tool: `get_work_item`
 
-For complete details, also call:
+If the internal id is not known, prefer one `search_workitems` call per resolved candidate project with `includeDetails: true`. Do not put the serial number in `subject`; Yunxiao serial numbers are not title text. Filter the returned list locally by exact `serialNumber`.
+
+```json
+{
+  "organizationId": "<org>",
+  "spaceId": "<project-id>",
+  "category": "Req",
+  "includeDetails": true,
+  "page": 1,
+  "perPage": 50
+}
+```
+
+Then select the item whose `serialNumber` exactly matches the requested number. If the first page does not contain the exact item and pagination indicates more pages, continue page-by-page until the item is found or the project result set is exhausted. Use `get_work_item` only when `search_workitems(includeDetails=true)` cannot return the required detail.
+
+Only call the following tools when the user explicitly asks for comments, attachments, activity history, audit trail, or complete collaboration records:
 
 - `list_work_item_comments`
 - `list_workitem_attachments`
 - `list_workitem_activities`
 
-Reading details is a read-only operation and does not require approval.
+Reading details is a read-only operation and does not require business confirmation. Minimize MCP calls because some clients request approval per MCP tool call.
 
 ## Work item changes
 

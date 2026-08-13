@@ -21,6 +21,8 @@
 | `rules/worktree.md` | 根项目注册表、worktree 创建/删除规则 | 创建、删除、迁移 worktree |
 | `rules/task-lifecycle.md` | 新需求初始化流程 | 开始新需求 |
 | `rules/design.md` | 设计方案、接口契约、前后端协作要求 | 产出方案文档 |
+| `rules/backend-role-guide.md` | cross 需求中同一 Agent 的后端角色职责 | 执行 cross 需求、维护后端开发习惯 |
+| `rules/frontend-role-guide.md` | cross 需求中同一 Agent 的前端角色职责 | 执行 cross 需求、维护前端开发习惯 |
 | `rules/handoff.md` | 执行交接文档要求 | 代码执行结束或切换 Agent |
 | `briefs/INDEX.md` | 已产出方案的需求简报索引 | 新增、完成、清理复杂需求 |
 | `briefs/WORKTREE-INDEX.md` | Brief 对应代码位置与分支索引 | 创建、删除、迁移 worktree 或调整执行分支 |

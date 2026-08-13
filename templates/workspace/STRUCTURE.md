@@ -27,6 +27,8 @@
 | `rules/` | 规则目录 | 设计、需求、worktree、交接规则 | 手工维护 |
 | `governance/agent-guard/` | 跨 Agent 全局治理 | Codex / Claude Hook、跨项目受保护路径/SQL 策略，以及人工签发的临时维护审批 | 手工维护，仅人工修改受保护文件 |
 | `rules/INDEX.md` | 规则索引 | rules 内部文件职责和同步触发 | 手工维护 |
+| `rules/backend-role-guide.md` | 角色规则 | cross 需求中同一 Agent 的后端角色职责 | 手工维护 |
+| `rules/frontend-role-guide.md` | 角色规则 | cross 需求中同一 Agent 的前端角色职责 | 手工维护 |
 | `scripts/` | 脚本目录 | 工作区自动化脚本 | 按工具维护 |
 | `briefs/` | 需求简报目录 | 复杂需求方案、接口契约、执行计划 | 按需求维护 |
 | `briefs/INDEX.md` | 需求简报索引 | 已产出方案文档的需求列表 | 按复杂需求维护 |
@@ -52,6 +54,7 @@
 | Codex Hook 注册 | `.codex/config.toml` | 由 `governance/agent-guard/hook-registry.json` 生成，不在用户级 Codex 配置维护工作站治理 |
 | Claude Hook 注册 | `.claude/settings.local.json` | 仅在当前工作站本地维护，不写入用户级 Claude 配置 |
 | Brief 对应代码位置和分支 | `briefs/WORKTREE-INDEX.md` | 不在交接文档或会话状态中重复维护 |
+| cross 双角色职责 | `rules/backend-role-guide.md`、`rules/frontend-role-guide.md` | `briefs/<类型>/<需求>/` 只写需求特有计划，不复制通用角色说明 |
 | 保存型文件产物 | `artifacts/` | 不进入 `briefs/INDEX.md` 或 `briefs/WORKTREE-INDEX.md`，不用于推断需求状态 |
 | Worktree 删除入口 | `scripts/remove-worktree.ps1` | 统一执行删除前检查和 Serena 可归属索引清理 |
 | 功能分支发布入口 | `scripts/publish-to-branch.ps1` | 统一执行文件范围检查、源分支推送、目标分支合并与恢复源分支 |
