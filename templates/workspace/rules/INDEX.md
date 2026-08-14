@@ -22,6 +22,7 @@
 | `rules/task-lifecycle.md` | 新需求初始化流程 | 开始新需求 |
 | `rules/design.md` | 设计方案、接口契约、前后端协作要求 | 产出方案文档 |
 | `rules/backend-role-guide.md` | cross 需求中同一 Agent 的后端角色职责 | 执行 cross 需求、维护后端开发习惯 |
+| `rules/backend-coding-style.md` | 通用后端编码习惯、分层、查询、事务和对象构造规则 | 执行后端代码修改、维护个人后端开发习惯 |
 | `rules/frontend-role-guide.md` | cross 需求中同一 Agent 的前端角色职责 | 执行 cross 需求、维护前端开发习惯 |
 | `rules/handoff.md` | 执行交接文档要求 | 代码执行结束或切换 Agent |
 | `briefs/INDEX.md` | 已产出方案的需求简报索引 | 新增、完成、清理复杂需求 |
@@ -41,6 +42,7 @@
 | 新增复杂需求方案 | `briefs/INDEX.md`、`briefs/WORKTREE-INDEX.md`、对应 `briefs/<类型>/<需求名>/` |
 | 创建、删除或迁移需求 worktree | `briefs/WORKTREE-INDEX.md`、必要时 `briefs/INDEX.md` |
 | 调整设计方案格式 | `rules/design.md`、`rules/task-lifecycle.md` 如入口变化 |
+| 调整后端编码习惯 | `rules/backend-coding-style.md`、`rules/backend-role-guide.md`、`README.md`、`STRUCTURE.md` |
 | 调整需求分级或流程 | `rules/task-lifecycle.md`、`README.md` |
 | 调整交接要求 | `rules/handoff.md`、`CLAUDE.md` / `AGENTS.md` 如路由变化 |
 | 新增规则文件 | `STRUCTURE.md`、`rules/INDEX.md`、`README.md`、`CLAUDE.md` / `AGENTS.md` 操作路由 |

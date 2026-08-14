@@ -14,6 +14,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$script:LastGitExitCode = 0
 
 function Normalize-PathString {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -25,8 +26,34 @@ function Invoke-Git {
         [Parameter(Mandatory = $true)][string[]]$Arguments,
         [switch]$AllowFailure
     )
-    $output = & git -c safe.directory=* -C $script:resolvedProjectPath @Arguments 2>&1
-    if ($LASTEXITCODE -ne 0 -and -not $AllowFailure) {
+
+    # PowerShell 7.3+ can promote native stderr to NativeCommandError when
+    # $ErrorActionPreference = Stop and PSNativeCommandUseErrorActionPreference
+    # is enabled by the host/profile. Git writes normal progress information
+    # such as "To <remote>" to stderr, especially for push/fetch. Capture both
+    # streams, but decide failure only by the native exit code.
+    $previousErrorActionPreference = $ErrorActionPreference
+    $hasNativePreference = Test-Path variable:\PSNativeCommandUseErrorActionPreference
+    if ($hasNativePreference) {
+        $previousNativePreference = $PSNativeCommandUseErrorActionPreference
+        $PSNativeCommandUseErrorActionPreference = $false
+    }
+
+    try {
+        $ErrorActionPreference = "Continue"
+        $rawOutput = & git -c safe.directory=* -C $script:resolvedProjectPath @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+        if ($hasNativePreference) {
+            $PSNativeCommandUseErrorActionPreference = $previousNativePreference
+        }
+    }
+
+    $script:LastGitExitCode = $exitCode
+    $output = @($rawOutput | ForEach-Object { [string]$_ })
+    if ($exitCode -ne 0 -and -not $AllowFailure) {
         $text = ($output | Out-String).Trim()
         throw "git $($Arguments -join ' ') failed.$([Environment]::NewLine)$text"
     }
@@ -105,6 +132,12 @@ function Assert-ExactChangedFiles {
     }
 }
 
+function Test-HeadMatchesCommitMessage {
+    param([Parameter(Mandatory = $true)][string]$ExpectedMessage)
+    $message = ((Invoke-Git -Arguments @('log', '-1', '--pretty=%B')) -join [Environment]::NewLine).Trim()
+    return $message -eq $ExpectedMessage.Trim()
+}
+
 function Assert-TargetNotCheckedOutElsewhere {
     param(
         [Parameter(Mandatory = $true)][string]$Branch,
@@ -122,7 +155,7 @@ function Assert-TargetNotCheckedOutElsewhere {
 function Test-RefExists {
     param([Parameter(Mandatory = $true)][string]$Ref)
     Invoke-Git -Arguments @('show-ref', '--verify', '--quiet', $Ref) -AllowFailure | Out-Null
-    return $LASTEXITCODE -eq 0
+    return $script:LastGitExitCode -eq 0
 }
 
 $resolvedProjectPath = Normalize-PathString $ProjectPath
@@ -133,7 +166,7 @@ if ($inside -ne 'true') { throw "Project path is not a Git worktree: $resolvedPr
 
 if ([string]::IsNullOrWhiteSpace($TargetBranch)) { throw "Invalid target branch name: $TargetBranch" }
 Invoke-Git -Arguments @('check-ref-format', '--branch', $TargetBranch) -AllowFailure | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "Invalid target branch name: $TargetBranch" }
+if ($script:LastGitExitCode -ne 0) { throw "Invalid target branch name: $TargetBranch" }
 
 $sourceBranch = Get-CurrentBranch
 if ($sourceBranch -eq $TargetBranch) { throw "Source and target branch are both '$sourceBranch'." }
@@ -144,7 +177,17 @@ if ($operations.Count -gt 0) { throw "Git operation already in progress: $($oper
 $expectedFiles = @($Files -split ',' | ForEach-Object { Normalize-RepoRelativePath $_.Trim() } | Sort-Object -Unique)
 if ($expectedFiles.Count -eq 0) { throw "At least one repository-relative file must be supplied with -Files. Use a comma-separated list." }
 
-Assert-ExactChangedFiles -ExpectedFiles $expectedFiles
+$changedFiles = @(Get-ChangedPaths)
+$resumeFromExistingSourceCommit = $false
+if ($changedFiles.Count -eq 0) {
+    $resumeFromExistingSourceCommit = Test-HeadMatchesCommitMessage -ExpectedMessage $CommitMessage
+    if (-not $resumeFromExistingSourceCommit) {
+        Assert-ExactChangedFiles -ExpectedFiles $expectedFiles
+    }
+}
+else {
+    Assert-ExactChangedFiles -ExpectedFiles $expectedFiles
+}
 Assert-TargetNotCheckedOutElsewhere -Branch $TargetBranch -CurrentPath $resolvedProjectPath
 
 $localTargetExists = Test-RefExists "refs/heads/$TargetBranch"
@@ -160,6 +203,7 @@ Write-Host "  target origin ref known locally: $remoteTargetExists"
 Write-Host "  files:"
 foreach ($file in $expectedFiles) { Write-Host "    - $file" }
 Write-Host "  commit message: $CommitMessage"
+Write-Host "  resume from existing source commit: $resumeFromExistingSourceCommit"
 Write-Host "  behavior on conflict, branch occupation, remote rejection, or any failed git command: stop and require human direction"
 if ($Preview) { exit 0 }
 
@@ -169,12 +213,19 @@ if (-not $remoteTargetExists) {
 }
 if (-not $remoteTargetExists) { throw "Target branch '$TargetBranch' does not exist on origin. It will not be created automatically. Ask the user for direction." }
 
-Assert-ExactChangedFiles -ExpectedFiles $expectedFiles
+if (-not $resumeFromExistingSourceCommit) {
+    Assert-ExactChangedFiles -ExpectedFiles $expectedFiles
+}
 Assert-TargetNotCheckedOutElsewhere -Branch $TargetBranch -CurrentPath $resolvedProjectPath
 
-Invoke-Git -Arguments (@('add', '--') + $expectedFiles) | Out-Null
-Invoke-Git -Arguments @('commit', '-m', $CommitMessage) | Out-Null
-$sourceCommit = (Invoke-Git -Arguments @('rev-parse', 'HEAD')).Trim()
+if ($resumeFromExistingSourceCommit) {
+    $sourceCommit = (Invoke-Git -Arguments @('rev-parse', 'HEAD')).Trim()
+}
+else {
+    Invoke-Git -Arguments (@('add', '--') + $expectedFiles) | Out-Null
+    Invoke-Git -Arguments @('commit', '-m', $CommitMessage) | Out-Null
+    $sourceCommit = (Invoke-Git -Arguments @('rev-parse', 'HEAD')).Trim()
+}
 
 # Always use -u so a source branch that inherited origin/master is repaired to origin/<source>.
 Invoke-Git -Arguments @('push', '-u', 'origin', $sourceBranch) | Out-Null

@@ -137,6 +137,7 @@
    Get-ChildItem -Path __WORKSPACE_ROOT__\briefs -Directory -Recurse -Filter "<需求名>"
    ```
 4. **读取方案文件**：按顺序读取 `agent-guide.md`（如存在）→ `需求-agent-guide.md` / `handoff-agent-guide.md`（历史兼容）→ `design.md` → `backend-plan.md`（后端）或 `frontend-plan.md`（前端）
+   - 执行期间用户或其他 Agent 可能继续更新 brief；每次开始实现、继续中断任务、切换阶段或发现上下文冲突时，必须重新读取当前需求 brief 文件，以磁盘最新内容为准。
 5. **cross 双角色读取**：如果匹配路径属于 `__WORKSPACE_ROOT__\briefs\cross\<需求名>\`，必须额外读取：
    - `__WORKSPACE_ROOT__\rules\backend-role-guide.md`
    - `__WORKSPACE_ROOT__\rules\frontend-role-guide.md`
@@ -145,6 +146,7 @@
 强制约束：
 
 - 工作区需求简报唯一根目录是 `__WORKSPACE_ROOT__\briefs`。
+- brief 是可持续更新的执行事实源；不得以会话记忆、旧摘要或历史交接覆盖磁盘上的最新 brief 内容。
 - 项目或 worktree 内的 `tasks/` 不是工作区需求简报入口，禁止用它推断方案路径或前后端执行目录。
 - 项目内 `tasks/lessons.md` 只能作为项目经验教训参考，不能覆盖 `__WORKSPACE_ROOT__\briefs/<类型>/<需求名>/` 下的设计和计划。
 - 新交接文档统一命名为 `agent-guide.md`；历史 `需求-agent-guide.md`、`handoff-agent-guide.md` 只做兼容读取。

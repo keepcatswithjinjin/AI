@@ -52,6 +52,7 @@ worktrees/project-web-worktree/order-export/
 5. 同步更新 `briefs/INDEX.md`。
 6. 审核通过后，按 `rules/worktree.md` 创建对应项目 worktree。
 7. 在执行 session 中自动按需求名读取 `briefs/INDEX.md` 和方案文件。
+8. 执行期间如果用户继续讨论、修改方案、补充交接或切换实现阶段，执行 Agent 必须重新读取当前需求 brief 文件；以磁盘上的最新 `agent-guide.md`、`design.md`、`api-contract.md`、`backend-plan.md`、`frontend-plan.md` 为准，不以会话记忆或旧摘要为准。
 
 ---
 
@@ -101,6 +102,7 @@ cross 需求默认由同一个 Agent 承担后端+前端两个角色，避免在
 ## 七、执行期上下文边界
 
 - 多项目工作站的需求简报唯一根目录是 `__WORKSPACE_ROOT__\briefs`。
+- brief 是可被讨论持续更新的执行事实源；执行 Agent 每次开始实现、继续中断任务、切换前后端阶段或发现上下文冲突时，必须重新读取当前需求 brief 的最新文件。
 - 项目或 worktree 内的自定义文档目录不属于多项目工作站需求生命周期，禁止作为需求方案入口。
 - `agent-guide.md` 是执行交接标准文件名；历史旧名只做兼容读取，不再作为新文档命名标准。
 

@@ -28,6 +28,7 @@
 | `governance/agent-guard/` | 跨 Agent 全局治理 | Codex / Claude Hook、跨项目受保护路径/SQL 策略，以及人工签发的临时维护审批 | 手工维护，仅人工修改受保护文件 |
 | `rules/INDEX.md` | 规则索引 | rules 内部文件职责和同步触发 | 手工维护 |
 | `rules/backend-role-guide.md` | 角色规则 | cross 需求中同一 Agent 的后端角色职责 | 手工维护 |
+| `rules/backend-coding-style.md` | 编码规则 | 通用后端编码习惯、分层、查询、事务和对象构造规则 | 手工维护 |
 | `rules/frontend-role-guide.md` | 角色规则 | cross 需求中同一 Agent 的前端角色职责 | 手工维护 |
 | `scripts/` | 脚本目录 | 工作区自动化脚本 | 按工具维护 |
 | `briefs/` | 需求简报目录 | 复杂需求方案、接口契约、执行计划 | 按需求维护 |
@@ -55,6 +56,7 @@
 | Claude Hook 注册 | `.claude/settings.local.json` | 仅在当前工作站本地维护，不写入用户级 Claude 配置 |
 | Brief 对应代码位置和分支 | `briefs/WORKTREE-INDEX.md` | 不在交接文档或会话状态中重复维护 |
 | cross 双角色职责 | `rules/backend-role-guide.md`、`rules/frontend-role-guide.md` | `briefs/<类型>/<需求>/` 只写需求特有计划，不复制通用角色说明 |
+| 通用后端编码习惯 | `rules/backend-coding-style.md` | 项目特有规则保留在项目级 `AGENTS.md` / `CLAUDE.md` |
 | 保存型文件产物 | `artifacts/` | 不进入 `briefs/INDEX.md` 或 `briefs/WORKTREE-INDEX.md`，不用于推断需求状态 |
 | Worktree 删除入口 | `scripts/remove-worktree.ps1` | 统一执行删除前检查和 Serena 可归属索引清理 |
 | 功能分支发布入口 | `scripts/publish-to-branch.ps1` | 统一执行文件范围检查、源分支推送、目标分支合并与恢复源分支 |
@@ -100,6 +102,7 @@ __WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>
 | 新增复杂需求 | `briefs/INDEX.md`、对应 `briefs/<类型>/<需求名>/` |
 | 创建、删除或迁移需求 worktree | `briefs/WORKTREE-INDEX.md`、必要时 `briefs/INDEX.md` |
 | 调整设计方案格式 | `rules/design.md`、`rules/task-lifecycle.md`、`STRUCTURE.md` |
+| 调整后端编码习惯 | `rules/backend-coding-style.md`、`rules/backend-role-guide.md`、`README.md`、`STRUCTURE.md` |
 | 调整新项目接入流程 | `vibe-coding-新项目初始化指南.md`、`STRUCTURE.md` |
 | 调整交接要求 | `rules/handoff.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
 
