@@ -28,3 +28,5 @@
 - 是否影响 `api-contract.md`。
 - 验证过的交互路径。
 - 需要后端角色继续处理的字段、接口、错误码或数据问题。
+- 如果用户要求测试说明或提测说明，必须按 `__WORKSPACE_ROOT__\rules\tester-note.md` 输出。
+- 如果用户要求检查报告、改动范围或影响范围说明，必须按 `__WORKSPACE_ROOT__\rules\change-report.md` 输出，证明改动范围、改动后的变化，以及没有改动原本其他逻辑的依据。

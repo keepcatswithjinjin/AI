@@ -108,7 +108,16 @@ function Build-MysqlArgs {
         $queryTimeoutSeconds = [int]$TargetConfig.queryTimeoutSeconds
     }
 
-    $args = @(
+    $args = @()
+    $defaultsExtraFile = ([string]$TargetConfig.clientDefaultsFile).Trim()
+    if ($defaultsExtraFile) {
+        if (-not (Test-Path -LiteralPath $defaultsExtraFile -PathType Leaf)) {
+            throw "clientDefaultsFile does not exist for target '$($TargetConfig.name)': $defaultsExtraFile"
+        }
+        $args += "--defaults-extra-file=$defaultsExtraFile"
+    }
+
+    $args += @(
         "--default-character-set=utf8mb4",
         "--connect-timeout=$connectTimeoutSeconds",
         "--init-command=SET SESSION MAX_EXECUTION_TIME=$($queryTimeoutSeconds * 1000)",
@@ -119,7 +128,7 @@ function Build-MysqlArgs {
         "-u", $TargetConfig.user
     )
 
-    if ($TargetConfig.password) {
+    if (-not $defaultsExtraFile -and $TargetConfig.password) {
         $args += "-p$($TargetConfig.password)"
     }
 

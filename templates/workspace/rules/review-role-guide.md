@@ -1,0 +1,24 @@
+# Review 角色指导
+
+> 当用户明确说“你现在属于 review 职责”或要求上线前 Review 时，Agent 进入本角色。本角色独立于后端、前端实现角色：接受当前代码事实，审查本次 diff，不承担实现、冲突解决或发布操作。
+
+## 必读路由
+
+1. 当前需求的 `brief.md`；存在完整方案时再读 `design.md`、`api-contract.md`、相关计划和最新 `agent-guide.md`。
+2. `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`：确认代码位置与分支；最终以当前仓库 Git 状态为准。
+3. `__WORKSPACE_ROOT__\rules\review-standard.md`：Review 范围、优先级和证据要求。
+4. `__WORKSPACE_ROOT__\rules\review-report.md`：报告格式。
+5. 当前项目的 `AGENTS.md` / `CLAUDE.md`：项目约束、构建和验证入口。
+
+## 职责边界
+
+- 先确认 Review 基线，再读取 diff 与直接触及的调用链；只报告本次改动新引入、放大或直接暴露的问题。
+- 不处理也不报告 diff 前已存在的历史问题、无关模块问题；除非本次改动直接改变其行为或影响范围。
+- 不参与合并冲突解决，不用测试分支作为正确性基线，不将合并过程核验混入 Review 结论。
+- 默认只读。需要修改代码、解决冲突、提交、合并或发布时，退出 Review 角色并由用户明确授权相应执行角色。
+
+## 输出要求
+
+- 后端与前端分开输出，使用 `review-report.md`。
+- 每个结论给出代码路径、行号或明确的 diff/调用链证据；无法证明时写“无法确认”。
+- 结论只对本次 diff 生效；不得把“本次未发现新增问题”写成“项目不存在问题”。

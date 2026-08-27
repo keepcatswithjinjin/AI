@@ -1,6 +1,6 @@
 # 需求简报索引
 
-> **规则**：只维护已产出方案文档（`briefs/`）的复杂需求。仅有 `agent-guide.md` 而无方案文档的需求，不进入本索引。
+> **规则**：维护已创建最小 brief 或完整方案的需求。用户明确跳过 brief 的简单需求不进入本索引。
 >
 > **命名约定**：worktree 名 = brief 文件夹名。
 >
@@ -16,31 +16,20 @@
 
 ---
 
-## 状态说明
-
-| 状态 | 含义 |
-|------|------|
-| 未开始 | 方案文档已建，worktree 未创建 |
-| 敲定方案 | design.md 已完成，等待创建 worktree 进入开发 |
-| 开发中 | worktree 存在，正在编码 |
-| 开发完成 | worktree 已删除，代码已合并 |
-
----
-
 ## cross（前后端协作）
 
-| 需求 | 方案路径 | 后端 worktree | 前端 worktree | 状态 |
-|------|---------|-------------|--------------|------|
-| `example-feature` | `briefs/cross/example-feature/` | `worktrees/project-api-worktree/example-feature` | `worktrees/project-web-worktree/example-feature` | 示例 |
+| 需求 | brief 路径 |
+|------|-----------|
+| `example-feature` | `briefs/cross/example-feature/` |
 
 ## backend（纯后端）
 
-| 需求 | 方案路径 | worktree | 状态 |
-|------|---------|---------|------|
-| — | — | — | 暂无 |
+| 需求 | brief 路径 |
+|------|-----------|
+| — | — |
 
 ## frontend（纯前端）
 
-| 需求 | 方案路径 | worktree | 状态 |
-|------|---------|---------|------|
-| — | — | — | 暂无 |
+| 需求 | brief 路径 |
+|------|-----------|
+| — | — |

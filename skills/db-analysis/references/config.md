@@ -37,7 +37,8 @@ These are conventions, not hard-coded skill requirements.
 - `database`: optional default database/schema. Keep it empty for a multi-schema target; schema operations still require an explicit `-Database`.
 - `allowedDatabases`: required non-empty list of schemas that this target may expose to an agent. `-Action databases` returns only this list; an unlisted schema is rejected before a query is sent.
 - `user`: database user
-- `password`: optional; empty string supports passwordless local accounts
+- `clientDefaultsFile`: optional absolute path to a private MySQL option file. When set, the script passes it as `--defaults-extra-file` and reads credentials from `[client]`; this is preferred for password-authenticated targets.
+- `password`: legacy optional field. It is used only when `clientDefaultsFile` is absent; migrate it to a private option file instead.
 - `allowOperationalReadonlyGrants`: optional; keep `false` by default. When `true`, allows `LOCK TABLES`, `PROCESS`, and replication-related grants, but direct write and administrative grants remain prohibited.
 - `connectTimeoutSeconds`: optional connection timeout; defaults to 15 seconds.
 - `queryTimeoutSeconds`: optional server-side read-query timeout; defaults to 60 seconds.
@@ -57,7 +58,7 @@ These are conventions, not hard-coded skill requirements.
       "port": 3306,
       "database": "example_database",
       "user": "readonly_user",
-      "password": "",
+      "clientDefaultsFile": "D:\\private\\mysql\\readonly.cnf",
       "note": "Example read-only target"
     }
   ]

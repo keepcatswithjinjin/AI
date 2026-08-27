@@ -33,7 +33,7 @@
 | `remove-worktree.cmd` | Windows 入口，受控删除 worktree 并清理可归属 Serena 索引 | 删除需求 worktree |
 | `remove-worktree.ps1` | Worktree 删除主脚本 | 调整删除前检查或 Serena 清理逻辑时 |
 | `publish-to-branch.cmd` | Windows 入口，将当前功能分支的指定文件提交、推送并受控合入指定远端分支 | 功能完成后提交并合入测试/集成分支 |
-| `publish-to-branch.ps1` | 分支发布主脚本 | 调整提交、分支切换、合并与推送的安全检查时 |
+| `publish-to-branch.ps1` | 分支发布与冲突核验主脚本 | 调整提交、分支切换、合并、三方输入冻结、核验与推送时 |
 
 ---
 
@@ -93,7 +93,8 @@
 - 工作区入口默认读取 `__WORKSPACE_ROOT__\scripts\db-targets.json`，也可显式传 `-ConfigPath`。
 - 实际查询逻辑来自全局 Codex skill：`%USERPROFILE%\.codex\skills\db-analysis\scripts\db-analysis.ps1`。
 - 默认适用于本机已安装 MySQL 客户端、已开白或本地可直连的库。
-- `password` 可留空；若后续改成口令认证，再补到本地配置。
+- 口令认证目标优先配置 `clientDefaultsFile`，指向本机私有 MySQL option file；脚本通过 `--defaults-extra-file` 读取，避免将密码放入命令行参数。`password` 仅作为旧配置兼容字段。
+- 若现有本地 `db-targets.json` 仍使用 `password`，可执行 `./scripts/migrate-db-client-credentials.ps1 -Preview` 查看迁移预案，确认后去掉 `-Preview`。
 - 这是查询和分析工具，不负责 DDL 变更或批量写操作；生产读端默认连接超时 15 秒、查询超时 10 分钟、最多返回 1000 行；允许 `SELECT *`，但仍拒绝敏感字段、行锁和诊断表查询。每个目标必须在本地 `allowedDatabases` 中显式列出可查询 schema；`-Action databases` 仅显示该白名单，`tables`、`columns`、`create`、`query` 都必须传入一个已批准的 `-Database`。仅显式标记为 `environment: test` 的目标可使用高权限账号，且仍只允许读取 action 与只读 SQL。
 - 每次连接目标都会先检查 `SHOW GRANTS FOR CURRENT_USER()`，发现写权限或管理权限会拒绝继续。
 
@@ -131,13 +132,29 @@
 
 确认预览后，使用相同参数去掉 `-Preview` 执行。
 
+若 Git 合并发生冲突，脚本会冻结三方输入并停在目标分支。人工解决、`git add` 后，使用相同参数继续：
+
+```powershell
+.\scripts\publish-to-branch.cmd <原有参数> -Mode VerifyConflict
+.\scripts\publish-to-branch.cmd <原有参数> -Mode CompleteConflict -ConfirmConflictCompletion
+
+# Java/POM 冲突：必须提供当前 worktree 的 Maven 模块
+.\scripts\publish-to-branch.cmd <原有参数> -Mode VerifyConflict -CompileModules <模块1,模块2> -MavenSettings <settings文件>
+
+# B 类冲突：填写 artifact 中生成的 manual-acceptance.md 后继续
+.\scripts\publish-to-branch.cmd <原有参数> -Mode VerifyConflict -ManualAcceptanceFile <已填写文件路径>
+```
+
 - `TargetBranch` 由调用方指定；脚本不固定测试分支名，也不自动创建远端目标分支。
 - `Files` 使用逗号分隔的仓库相对路径，且当前所有未提交文件必须与该清单完全一致。
 - 脚本先以 `git push -u origin <当前分支>` 推送源分支，修正误跟踪默认分支的 upstream。
 - 若上一次执行已完成源分支 commit/push 但脚本在后续步骤前中断，重新以相同参数执行时，脚本会在工作区干净且 HEAD 提交信息等于 `-CommitMessage` 的情况下从现有源分支提交继续。
 - 脚本按 Git 退出码判断失败，不把 `git push/fetch` 写入 stderr 的正常进度信息视为失败。
-- 仅在目标分支成功推送后才切回源分支。
-- 分支占用、冲突、远端拒绝、目标不存在或任一 Git 失败均停止并要求人工决定；不强制处理、不自动回滚。
+- 无冲突时，目标分支成功推送后才切回源分支。
+- 冲突时，脚本冻结 Git stage 1/base、stage 2/ours、stage 3/theirs 与冲突态原文到 `artifacts/merge-verification/`；解决后必须 `VerifyConflict`，通过后才可显式 `CompleteConflict`。
+- A 类纯新增冲突执行四项行多重集对账；B 类必须有人工决策记录；Java/POM 冲突必须通过 `mvn -pl ... -am compile`。
+- 分支占用、远端拒绝、目标不存在或任一 Git 失败均停止并要求人工决定；不强制处理、不自动回滚。
+- 详细规则见 `rules/merge-verification.md`；不使用测试分支作为正确性基线，也不替代上线前 Review。
 
 
 ## 四、Agent 路由
@@ -159,6 +176,7 @@
 - 删除 worktree：先执行 `.\scripts\remove-worktree.cmd -WorktreePath <worktree路径> -Preview`，确认后再执行不带 `-Preview` 的删除命令
 - 创建 worktree 并启用 Serena：按 `rules/worktree.md` 写入项目级 `.codex/config.toml`，Serena 命令必须使用已验证的可执行文件绝对路径，不自动回退到裸 `serena`
 - 提交并合入指定测试/集成分支：先执行 `.\scripts\publish-to-branch.cmd ... -Preview`，确认后再去掉 `-Preview`；不要手写 checkout / merge / push 绕过脚本
+- 合并冲突后核验：读取 `rules/merge-verification.md`，按 `VerifyConflict` → `CompleteConflict` 继续；不得绕过脚本直接提交 merge
 
 ---
 

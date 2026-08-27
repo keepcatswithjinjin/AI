@@ -24,6 +24,12 @@
 | `rules/backend-role-guide.md` | cross 需求中同一 Agent 的后端角色职责 | 执行 cross 需求、维护后端开发习惯 |
 | `rules/backend-coding-style.md` | 通用后端编码习惯、分层、查询、事务和对象构造规则 | 执行后端代码修改、维护个人后端开发习惯 |
 | `rules/frontend-role-guide.md` | cross 需求中同一 Agent 的前端角色职责 | 执行 cross 需求、维护前端开发习惯 |
+| `rules/tester-note.md` | 给测试同事看的功能测试说明、测试入口和回归范围规范 | 生成测试文档、测试要点、提测说明、回归测试范围 |
+| `rules/change-report.md` | 面向开发者/负责人的改动范围、影响范围和未改旧逻辑证明规范 | 生成检查报告、改动范围报告、影响范围说明、前端 vibe 改动说明 |
+| `rules/review-standard.md` | 上线前后端代码 Review 的优先级、范围和证据要求 | 上线前代码 Review、影响评估、上线安全检查 |
+| `rules/review-report.md` | 分离的后端 Review、前端 Review 和最终上线建议报告结构 | 输出上线前 Review 报告 |
+| `rules/review-role-guide.md` | 独立 Review 角色的必读路由、diff 边界和只读职责 | 用户指定 Review 职责、上线前代码 Review |
+| `rules/merge-verification.md` | Git 合并冲突的三方输入冻结、分类核验、人工决策与编译边界 | `publish-to-branch` 发生冲突后 |
 | `rules/handoff.md` | 执行交接文档要求 | 代码执行结束或切换 Agent |
 | `briefs/INDEX.md` | 已产出方案的需求简报索引 | 新增、完成、清理复杂需求 |
 | `briefs/WORKTREE-INDEX.md` | Brief 对应代码位置与分支索引 | 创建、删除、迁移 worktree 或调整执行分支 |
@@ -43,6 +49,10 @@
 | 创建、删除或迁移需求 worktree | `briefs/WORKTREE-INDEX.md`、必要时 `briefs/INDEX.md` |
 | 调整设计方案格式 | `rules/design.md`、`rules/task-lifecycle.md` 如入口变化 |
 | 调整后端编码习惯 | `rules/backend-coding-style.md`、`rules/backend-role-guide.md`、`README.md`、`STRUCTURE.md` |
+| 调整测试同事说明规范 | `rules/tester-note.md`、`README.md`、`CLAUDE.md` / `AGENTS.md`、`STRUCTURE.md` |
+| 调整改动检查报告规范 | `rules/change-report.md`、`README.md`、`CLAUDE.md` / `AGENTS.md`、`STRUCTURE.md` |
+| 调整上线前 Review 规范或 Review 角色 | `rules/review-standard.md`、`rules/review-report.md`、`rules/review-role-guide.md`、`README.md`、`CLAUDE.md` / `AGENTS.md`、`STRUCTURE.md` |
+| 调整合并冲突核验规范 | `rules/merge-verification.md`、`scripts/publish-to-branch.ps1`、`scripts/INDEX.md`、`rules/worktree.md`、`README.md`、`CLAUDE.md` / `AGENTS.md`、`STRUCTURE.md` |
 | 调整需求分级或流程 | `rules/task-lifecycle.md`、`README.md` |
 | 调整交接要求 | `rules/handoff.md`、`CLAUDE.md` / `AGENTS.md` 如路由变化 |
 | 新增规则文件 | `STRUCTURE.md`、`rules/INDEX.md`、`README.md`、`CLAUDE.md` / `AGENTS.md` 操作路由 |

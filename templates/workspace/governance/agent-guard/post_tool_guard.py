@@ -18,6 +18,18 @@ ENTRYPOINTS = [
     str(ROOT / "scripts" / "new-worktree.cmd"), str(ROOT / "scripts" / "new-worktree.ps1"),
     str(ROOT / "scripts" / "remove-worktree.cmd"), str(ROOT / "scripts" / "remove-worktree.ps1"),
 ]
+LIFECYCLE_SCRIPT_MARKERS = ("new-worktree.", "remove-worktree.")
+
+
+def payload_may_contain_lifecycle_script(raw_event: str) -> bool:
+    """Fail closed only when an unreadable payload may be a governed action.
+
+    PostToolUse is registered for every Bash command because its matcher cannot
+    filter by command arguments. A malformed event for an unrelated command
+    must not make this narrow worktree verifier a global failure source.
+    """
+    lowered = raw_event.lower()
+    return any(marker in lowered for marker in LIFECYCLE_SCRIPT_MARKERS)
 
 
 def value(command: str, name: str) -> str:
@@ -79,9 +91,23 @@ def verify(command: str, cwd: str) -> str | None:
 
 
 def main() -> int:
+    raw_event = sys.stdin.read()
     try:
-        event = json.load(sys.stdin)
-        command = str((event.get("tool_input") or {}).get("command") or "")
+        event = json.loads(raw_event)
+    except json.JSONDecodeError as exc:
+        if payload_may_contain_lifecycle_script(raw_event):
+            print(f"Post-worktree verifier failed closed: malformed lifecycle payload ({exc})", file=sys.stderr)
+            return 1
+        return 0
+
+    if not isinstance(event, dict):
+        return 0
+    tool_input = event.get("tool_input") or {}
+    if not isinstance(tool_input, dict):
+        return 0
+
+    try:
+        command = str(tool_input.get("command") or "")
         reason = verify(command, str(event.get("cwd") or ""))
     except Exception as exc:
         print(f"Post-worktree verifier failed closed: {exc}", file=sys.stderr)

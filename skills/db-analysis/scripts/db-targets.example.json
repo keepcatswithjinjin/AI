@@ -8,7 +8,7 @@
       "database": "",
       "allowedDatabases": ["demo_db"],
       "user": "readonly_user",
-      "password": "",
+      "clientDefaultsFile": "",
       "note": "Example only. Keep real credentials in a local config outside the skill."
     }
   ]

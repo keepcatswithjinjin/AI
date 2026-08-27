@@ -92,5 +92,5 @@ It does not replace database grants, operating-system permissions, or remote
 branch protections. Database operations must continue through
 `__WORKSPACE_ROOT__\scripts\db-analysis.cmd`.
 
-`PostToolUse` is intentionally registered only for Bash and exits immediately for every command except non-preview `new-worktree` and `remove-worktree`. For those commands it independently verifies the filesystem and Git worktree registration.
+`PostToolUse` is intentionally registered only for Bash and exits immediately for every command except non-preview `new-worktree` and `remove-worktree`. If Codex supplies a malformed PostToolUse payload, it is skipped unless its raw payload appears to contain either lifecycle script; those still fail closed. For lifecycle commands it independently verifies the filesystem and Git worktree registration.
 

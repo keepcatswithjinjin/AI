@@ -8,7 +8,7 @@
       "database": "",
       "allowedDatabases": ["example_database"],
       "user": "readonly_user",
-      "password": "",
+      "clientDefaultsFile": "",
       "allowOperationalReadonlyGrants": false,
       "connectTimeoutSeconds": 15,
       "queryTimeoutSeconds": 600,
