@@ -63,6 +63,8 @@ __WORKSPACE_ROOT__\
 
 > 项目级 CLAUDE.md 保持精简，详细的全局规则通过 `__WORKSPACE_ROOT__\rules/` 统一维护。
 
+项目级 `CLAUDE.md` 与 `AGENTS.md` 都应注明：新增 worktree 必须先读取工作站的 `rules/worktree.md` 和 `scripts/INDEX.md`，走 `scripts/new-worktree.cmd` 预览、确认和执行；失败时停止报告，不自行调用 `git worktree add` 或改用仓库内目录。
+
 ### 2.2 knowledge/ 目录结构
 
 在项目根目录创建：
@@ -165,7 +167,7 @@ __WORKSPACE_ROOT__\worktrees\项目目录名-worktree\
 - 本目录只存放该项目的临时并行开发 worktree。
 - 不在父目录直接开发。
 - 不删除父目录。
-- 子 worktree 完成后从主项目执行 `git worktree remove <路径>` 清理。
+- 子 worktree 完成后使用工作站 `scripts/remove-worktree.cmd` 清理，并更新 `briefs/WORKTREE-INDEX.md`。
 
 ---
 
@@ -229,6 +231,7 @@ __WORKSPACE_ROOT__\worktrees\项目目录名-worktree\
 
 - [ ] 项目平级放在 `__WORKSPACE_ROOT__\` 下
 - [ ] 项目级 `CLAUDE.md` 已创建，3 处项目名已替换
+- [ ] 项目级 `AGENTS.md` / `CLAUDE.md` 已路由工作站 worktree 脚本，并注明失败时不得降级到原生 Git 命令
 - [ ] `knowledge/INDEX.md` 已创建
 - [ ] `knowledge/modules/README.md` 已创建
 - [ ] `knowledge/` 未被 Git 追踪（`git status` 验证）

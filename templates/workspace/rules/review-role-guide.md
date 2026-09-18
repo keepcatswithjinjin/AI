@@ -4,7 +4,7 @@
 
 ## 必读路由
 
-1. 当前需求的 `brief.md`；存在完整方案时再读 `design.md`、`api-contract.md`、相关计划和最新 `agent-guide.md`。
+1. 复杂需求先读 `design.md`，确认最新目标、方案变化、旧逻辑和验收边界；再读适用的 `api-contract.md` 与前后端计划。简单需求以用户当前明确的范围和当前 diff 为准。`agent-guide.md` 仅在需要执行状态或验证证据时读取，不作为设计事实源。
 2. `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`：确认代码位置与分支；最终以当前仓库 Git 状态为准。
 3. `__WORKSPACE_ROOT__\rules\review-standard.md`：Review 范围、优先级和证据要求。
 4. `__WORKSPACE_ROOT__\rules\review-report.md`：报告格式。
@@ -16,6 +16,7 @@
 - 不处理也不报告 diff 前已存在的历史问题、无关模块问题；除非本次改动直接改变其行为或影响范围。
 - 不参与合并冲突解决，不用测试分支作为正确性基线，不将合并过程核验混入 Review 结论。
 - 默认只读。需要修改代码、解决冲突、提交、合并或发布时，退出 Review 角色并由用户明确授权相应执行角色。
+- 用户或其他 Agent 对 Review 结论提出反驳、补充事实或质疑证据时，必须先重新核验当前 diff、代码来源和直接调用链，再调整结论。无论保留、强化、降级或撤回结论，都要附新的代码证据，并说明结论变化原因；不得因反驳本身直接让步或坚持。
 
 ## 输出要求
 

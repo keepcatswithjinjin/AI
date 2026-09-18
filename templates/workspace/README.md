@@ -70,13 +70,14 @@
 - 根目录允许运行只读 Git 仪表盘，用于查看项目、worktree、测试分支占用；看板查询不需要额外总结。
 - Codex / Claude Code 的工作站治理 Hook 只注册在当前工作站 local 配置中，不写入用户级配置。
 - 新需求默认使用 `worktrees/<原项目目录名>-worktree/<需求名>`。
-- 新增 worktree 优先使用 `scripts\new-worktree.cmd`，不要手写底层 Git 创建命令。
+- 新增 worktree 必须使用 `scripts\new-worktree.cmd`。脚本或目标目录权限失败时停止并报告，不手写底层 Git 命令，也不改建到项目内其他目录。
 - 复杂需求的 `需求名 = brief 文件夹名 = worktree 目录名`。
 - cross 需求默认由同一个 Agent 承担后端+前端两个角色；通用角色职责维护在 `rules/backend-role-guide.md` 与 `rules/frontend-role-guide.md`，不写进每个 brief。
 - 通用后端编码习惯维护在 `rules/backend-coding-style.md`；项目特殊规则仍以项目级 `AGENTS.md` / `CLAUDE.md` 和当前源码为准。
 - 需求对应的前端/后端代码位置和分支只维护在 `briefs\WORKTREE-INDEX.md`；不维护 Agent 会话恢复状态。
 - `artifacts/` 只保存需要沉淀的文件产物，不用来推断需求状态、代码位置或分支。
-- 简单需求首次确认时会提示是否创建最小 brief；这是协作提示而非强制门槛。已创建最小 brief 或完整方案的需求登记到 `briefs/INDEX.md`，不维护开发状态。
+- 简单需求不创建独立 brief，也不登记索引；以当前明确范围与 diff 作为执行和 Review 边界。
+- 复杂需求使用 `design.md`、对应执行计划及适用接口契约；不维护独立需求文档。用户只审核自包含的 `design.md`。执行 Agent 按最新决定同步设计、契约与计划，提交前核对当前 diff 和未确认偏离。
 - 新增 worktree 若启用 Serena，必须按 `rules/worktree.md` 写入项目级 `.codex/config.toml`，并使用已验证的 Serena 可执行文件绝对路径。
 - 需求方案设计或复杂代码理解中，如需要大量查询函数、类、引用、调用关系，可优先考虑在启用 Serena 的 worktree 中使用 Serena；文本检索和简单定位仍可使用 `rg`。
 - 删除 worktree 优先使用 `scripts\remove-worktree.cmd`；启用 Serena 的 worktree 会同步清理用户级项目注册和可归属 JDTLS workspace 索引，保留共享索引与日志。

@@ -48,6 +48,7 @@
 | 新增复杂需求方案 | `briefs/INDEX.md`、`briefs/WORKTREE-INDEX.md`、对应 `briefs/<类型>/<需求名>/` |
 | 创建、删除或迁移需求 worktree | `briefs/WORKTREE-INDEX.md`、必要时 `briefs/INDEX.md` |
 | 调整设计方案格式 | `rules/design.md`、`rules/task-lifecycle.md` 如入口变化 |
+| 执行中决策同步或提交前 briefs 对齐 | `rules/task-lifecycle.md`、`rules/design.md`、`rules/handoff.md`、对应需求的设计/契约/计划 |
 | 调整后端编码习惯 | `rules/backend-coding-style.md`、`rules/backend-role-guide.md`、`README.md`、`STRUCTURE.md` |
 | 调整测试同事说明规范 | `rules/tester-note.md`、`README.md`、`CLAUDE.md` / `AGENTS.md`、`STRUCTURE.md` |
 | 调整改动检查报告规范 | `rules/change-report.md`、`README.md`、`CLAUDE.md` / `AGENTS.md`、`STRUCTURE.md` |

@@ -64,7 +64,7 @@
 | 查询数据库结构 | `scripts/INDEX.md` | 可选能力；安装了 db-analysis 后，根据本地数据库目标配置执行只读分析 |
 | 查询或维护云效任务/需求/流水线 | `.codex/skills/yunxiao-workstation/SKILL.md` | 可选能力；安装了 Yunxiao 后，使用工作站本地 `yunxiao` MCP |
 | 查看需求代码位置 | `briefs/WORKTREE-INDEX.md` | 查看 brief 对应的前端/后端代码位置和分支 |
-| 设计方案 | `rules/design.md` | 方案章节、接口原则、前后端协作、检查清单 |
+| 设计方案 / 执行中对齐 briefs | `rules/design.md`、`rules/task-lifecycle.md` | 用户只审核 design；执行 Agent 按最新决定同步设计、契约和计划 |
 | 生成给测试同事的测试说明 | `rules/tester-note.md` | 简洁说明原本现状、本次修改、测试入口、重点验证和回归范围 |
 | 生成面向开发者的检查报告 | `rules/change-report.md` | 说明改动范围、改动后的变化、未改变的旧逻辑和证明依据 |
 | 上线前代码 Review / 指定 Review 职责 | `rules/review-role-guide.md`、`rules/review-standard.md`、`rules/review-report.md` | 只按本次 diff 审查新增问题，分离输出后端/前端 Review |
@@ -74,7 +74,7 @@
 
 > AI 检测到对应意图时，**必须先读取**路由指向的文件，再执行。
 
-创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。启用 Serena 时必须由脚本写入项目级 `.codex/config.toml`。
+创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。脚本或目标目录权限失败时停止并报告，不手写 `git worktree add` 或改用其他目录。启用 Serena 时必须由脚本写入项目级 `.codex/config.toml`。
 
 删除 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/remove-worktree.cmd -WorktreePath <路径> -Preview` 输出删除预案；若启用了 Serena，删除预案必须包含用户级 Serena 项目注册和可归属 JDTLS workspace 索引清理项。删除完成后必须同步更新 `briefs/WORKTREE-INDEX.md` 中对应代码位置。
 
@@ -151,17 +151,19 @@
    ```powershell
    Get-ChildItem -Path __WORKSPACE_ROOT__\briefs -Directory -Recurse -Filter "<需求名>"
    ```
-4. **读取方案文件**：按顺序读取 `brief.md`（如存在）→ `agent-guide.md`（如存在）→ `需求-agent-guide.md` / `handoff-agent-guide.md`（历史兼容）→ `design.md` → `backend-plan.md`（后端）或 `frontend-plan.md`（前端）
-   - 执行期间用户或其他 Agent 可能继续更新 brief；每次开始实现、继续中断任务、切换阶段或发现上下文冲突时，必须重新读取当前需求 brief 文件，以磁盘最新内容为准。
+4. **读取方案文件**：按顺序读取 `design.md` → `api-contract.md`（如涉及）→ `backend-plan.md`（后端）或 `frontend-plan.md`（前端）→ `agent-guide.md`（如存在；历史旧名兼容）。先理解全局设计，再依据计划实施；交接记录不覆盖方案。
+   - 执行期间用户或其他 Agent 可能继续更新方案；每次开始实现、继续中断任务、切换阶段或发现上下文冲突时，必须重新读取相关文件，以磁盘最新内容为准。
 5. **cross 双角色读取**：如果匹配路径属于 `__WORKSPACE_ROOT__\briefs\cross\<需求名>\`，必须额外读取：
    - `__WORKSPACE_ROOT__\rules\backend-role-guide.md`
    - `__WORKSPACE_ROOT__\rules\frontend-role-guide.md`
    - `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`
+   - 当前需求下的 `backend-plan.md` 与 `frontend-plan.md`
 
 强制约束：
 
 - 工作区需求简报唯一根目录是 `__WORKSPACE_ROOT__\briefs`。
 - brief 是可持续更新的执行事实源；不得以会话记忆、旧摘要或历史交接覆盖磁盘上的最新 brief 内容。
+- 执行中依据代码事实与用户讨论调整决策时，按 `rules/task-lifecycle.md` 第八节同步相关 briefs；用户只需审核 `design.md`，故关键变化必须在其中可见。用户要求提交/发布前对齐 briefs 时，先核对当前 diff 与已确认变化，再修正过期文档并指出未确认偏离。
 - 项目或 worktree 内的 `tasks/` 不是工作区需求简报入口，禁止用它推断方案路径或前后端执行目录。
 - 项目内 `tasks/lessons.md` 只能作为项目经验教训参考，不能覆盖 `__WORKSPACE_ROOT__\briefs/<类型>/<需求名>/` 下的设计和计划。
 - 新交接文档统一命名为 `agent-guide.md`；历史 `需求-agent-guide.md`、`handoff-agent-guide.md` 只做兼容读取。

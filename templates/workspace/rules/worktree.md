@@ -104,11 +104,13 @@ startup_timeout_sec = 120
 
 ### 脚本入口
 
-新增 worktree 优先使用 `__WORKSPACE_ROOT__\scripts\new-worktree.cmd`。
+新增 worktree 必须使用 `__WORKSPACE_ROOT__\scripts\new-worktree.cmd`，包括从项目根目录启动的 Agent 会话；项目级 `AGENTS.md` / `CLAUDE.md` 应路由到本规则和 `scripts/INDEX.md`。
 
 先预览，确认后再创建。
 
-Agent 不得用手写底层 Git 创建命令代替该脚本。
+Agent 不得用手写底层 Git 创建命令代替该脚本，也不得因目标目录写入受限而改建到项目内 `.codex-worktrees/` 或其他路径。脚本失败时保留现场，报告失败命令、环境限制和已产生的状态；取得正确路径的执行权限或由用户明确修改工作站规则后再继续。
+
+先以 `-Preview` 获取预案，经确认后再执行。真正创建时若远端访问或写入被沙箱限制，应申请所需权限，不能用其他目录或原生 Git 命令绕过。
 
 预览示例：
 
@@ -122,23 +124,9 @@ __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-fea
 __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master -Serena Enable
 ```
 
-### 底层命令说明
+### 底层动作说明（不可直接调用）
 
-默认基于最新 `master`：
-
-```bash
-mkdir -p "<Worktree父目录>"
-cd "<仓库路径>" && git fetch origin master && git checkout master && git pull --ff-only origin master
-cd "<仓库路径>" && git worktree add -b <type>/<name> "<Worktree父目录>/<name>" master
-```
-
-指定已存在分支：
-
-```bash
-mkdir -p "<Worktree父目录>"
-cd "<仓库路径>" && git fetch --all --prune
-cd "<仓库路径>" && git worktree add -b <type>/<name> "<Worktree父目录>/<name>" <base-branch>
-```
+脚本负责创建父目录、更新或核验基线分支、创建并注册 Git worktree、按需写入 Serena 配置。此处不提供可复制的底层 Git 命令；实际创建入口只有上述脚本。
 
 ### 规则
 
