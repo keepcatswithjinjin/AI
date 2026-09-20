@@ -35,9 +35,8 @@ worktrees/project-web-worktree/resub-report/
 
 1. 不创建独立需求目录，在当前会话明确改动范围、验收边界和不改项后直接执行。
 2. 读取 `rules/worktree.md`，按注册表选择根项目并创建 `worktrees/<原项目目录名>-worktree/<需求名>`。
-3. 创建 worktree 时按 `rules/worktree.md` 询问是否启用 Serena；简单需求默认不启用。
-4. 在 worktree 中按项目级 `CLAUDE.md` / `AGENTS.md` 执行；提交前以当前 diff、用户已确认的范围和项目规则完成核对。
-5. 完成后使用 `scripts/remove-worktree.cmd` 删除 worktree。
+3. 在 worktree 中按项目级 `CLAUDE.md` / `AGENTS.md` 执行；提交前以当前 diff、用户已确认的范围和项目规则完成核对。
+4. 完成后使用 `scripts/remove-worktree.cmd` 删除 worktree。
 
 ---
 
@@ -49,11 +48,10 @@ worktrees/project-web-worktree/resub-report/
 4. 按 `rules/design.md` 产出对应文档；用户只需审核自包含的 `design.md`。
 5. 同步更新 `briefs/INDEX.md`。
 6. 审核通过后，按 `rules/worktree.md` 创建对应项目 worktree。
-7. 创建 worktree 时询问是否启用 Serena；复杂需求推荐启用，并在 worktree 根目录写入项目级 `.codex/config.toml`。
-8. 在 Codex 桌面端新开 task，目录选择对应 worktree 根目录；需要 Serena 时必须通过新 task 加载项目级配置。
-9. 在执行 session 中自动按需求名读取 `briefs/INDEX.md` 和方案文件。
-10. 执行 Agent 开始实施前必须读取 `design.md`、适用的契约与计划。了解全局设计后按计划实现；计划不是限制其判断代码事实的边界。
-11. 执行期间如果用户继续讨论、修改方案、补充交接或切换实现阶段，执行 Agent 必须重新读取相关文件；按第八节同步执行中确认的变化，不以会话记忆或旧摘要为准。
+7. 在 Codex 桌面端新开 task，目录选择对应 worktree 根目录。
+8. 在执行 session 中自动按需求名读取 `briefs/INDEX.md` 和方案文件。
+9. 执行 Agent 开始实施前必须读取 `design.md`、适用的契约与计划。了解全局设计后按计划实现；计划不是限制其判断代码事实的边界。
+10. 执行期间如果用户继续讨论、修改方案、补充交接或切换实现阶段，执行 Agent 必须重新读取相关文件；按第八节同步执行中确认的变化，不以会话记忆或旧摘要为准。
 
 ---
 

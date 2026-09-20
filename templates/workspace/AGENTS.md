@@ -20,6 +20,7 @@
 
 - `__WORKSPACE_ROOT__` 是工作区容器，不是 Git 仓库；禁止在根目录初始化、恢复或操作 `.git`。
 - Git 命令只能在 `rules/worktree.md` 登记的项目根目录或其 worktree 内执行。
+- 已登记根项目的 `master` 只允许基线同步、只读理解，以及用户明确要求的本次业务和直接连带文档；不得在其中维护治理、Hook / Agent 配置、工作站能力、项目导航或其他非业务内容。详细边界见 `rules/worktree.md`。
 
 ---
 
@@ -67,6 +68,7 @@
 | 设计方案 / 执行中对齐 briefs | `rules/design.md`、`rules/task-lifecycle.md` | 用户只审核 design；执行 Agent 按最新决定同步设计、契约和计划 |
 | 生成给测试同事的测试说明 | `rules/tester-note.md` | 简洁说明原本现状、本次修改、测试入口、重点验证和回归范围 |
 | 生成面向开发者的检查报告 | `rules/change-report.md` | 说明改动范围、改动后的变化、未改变的旧逻辑和证明依据 |
+| 生成首版人工代码 Review 导航图 | `rules/first-pass-code-review.md` | 仅用户明确触发；基于未提交 diff 生成 IDE 导航与流程图，不进入上线前 Review |
 | 上线前代码 Review / 指定 Review 职责 | `rules/review-role-guide.md`、`rules/review-standard.md`、`rules/review-report.md` | 只按本次 diff 审查新增问题，分离输出后端/前端 Review |
 | 开始新需求 | `rules/task-lifecycle.md` | 判断简单/复杂需求；简单需求提示是否创建最小 brief 作为 Review 锚点 |
 | 管理 worktree | `rules/worktree.md` | 注册表、创建/删除交互流程 |
@@ -74,13 +76,13 @@
 
 > AI 检测到对应意图时，**必须先读取**路由指向的文件，再执行。
 
-创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。脚本或目标目录权限失败时停止并报告，不手写 `git worktree add` 或改用其他目录。启用 Serena 时必须由脚本写入项目级 `.codex/config.toml`。
+创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。脚本或目标目录权限失败时停止并报告，不手写 `git worktree add` 或改用其他目录。
 
-删除 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/remove-worktree.cmd -WorktreePath <路径> -Preview` 输出删除预案；若启用了 Serena，删除预案必须包含用户级 Serena 项目注册和可归属 JDTLS workspace 索引清理项。删除完成后必须同步更新 `briefs/WORKTREE-INDEX.md` 中对应代码位置。
+删除 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/remove-worktree.cmd -WorktreePath <路径> -Preview` 输出删除预案。删除完成后必须同步更新 `briefs/WORKTREE-INDEX.md` 中对应代码位置。
 
 当用户要求“提交当前功能分支并合入某个测试/集成分支”时，必须先读取 `scripts/INDEX.md`，再使用 `scripts/publish-to-branch.cmd` 先执行 `-Preview`。确认后才可执行；目标分支占用、远端拒绝或其他失败必须停止并请求人工决定，禁止手写 checkout / merge / push 流程绕过脚本。若 Git 合并冲突，必须再读取 `rules/merge-verification.md`，按 `VerifyConflict` → `CompleteConflict` 继续，不得直接提交 merge。
 
-当需求方案设计或复杂代码理解需要大量查询函数、类、引用、调用关系时，可优先考虑在已启用 Serena 的 worktree 中使用 Serena 工具；简单文本检索、文件定位和日志查看仍优先使用 `rg` / 常规只读命令。
+当需求方案设计或复杂代码理解需要大量查询函数、类、引用、调用关系时，先按项目内索引、代码导航与检索工具核验；简单文本检索、文件定位和日志查看仍优先使用 `rg` / 常规只读命令。
 
 当用户要求“查看当前 Git 状态 / worktree 状态 / 测试分支占用 / Git 仪表盘”时，进入**只读看板模式**，允许在根目录直接执行：
 
@@ -116,6 +118,8 @@
 
 当用户要求“检查报告 / 改动范围报告 / 影响范围说明 / 证明没有改其他逻辑 / 前端改动说明 / vibe 前端检查 / 给我看改了哪里”时，必须先读取 `rules/change-report.md`。输出面向开发者/负责人，不需要复述需求背景；必须说明改动范围、改动后的变化、未改变的原有逻辑和证明依据。
 
+当用户明确要求“首版代码 Review 导航图 / 未提交 diff 调用链图 / 在 IDEA 对照检查代码”时，必须先读取 `rules/first-pass-code-review.md`。该操作仅服务于提交前人工核对；只生成当前未提交 diff 的入口、主调用链、关键改动点和流程图，不输出风险、测试或上线结论，不进入上线前 Review 角色。
+
 当用户要求“上线前代码 Review / 上线检查 / 增量功能影响评估 / 前后端 Review 报告”或明确说“你现在属于 review 职责”时，必须先读取 `rules/review-role-guide.md`、`rules/review-standard.md` 和 `rules/review-report.md`。Review 默认只读，只审查指定基线到当前代码的 diff 及其直接调用链；不处理历史问题、无关模块、合并冲突或发布操作。
 
 ---
@@ -139,7 +143,7 @@
 
 - 工作站 `rules/` 中的角色指导、个人编码风格、测试/验证规范、Review 报告和测试说明规范属于设计层，统一维护在工作站，不复制到具体项目。
 - 项目级 `AGENTS.md` / `CLAUDE.md` 只保留项目入口；从项目或 worktree 启动时，先通过入口找到工作站 `briefs` 和相关 `rules`，再按需求类型读取。
-- 项目内只维护项目事实：代码结构、实际构建/测试入口、项目专属约束、项目级 MCP/Serena 和项目级 Hook。
+- 项目内只维护项目事实：代码结构、实际构建/测试入口、项目专属约束、项目级 MCP 和项目级 Hook。
 
 ### 6.1 执行 Session 自动发现（强制）
 

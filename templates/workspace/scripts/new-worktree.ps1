@@ -4,12 +4,9 @@ param(
     [ValidateSet("feature", "hotfix")]
     [string]$Type = "feature",
     [string]$BaseBranch = "master",
-    [ValidateSet("Ask", "Enable", "Disable")]
-    [string]$Serena = "Ask",
     [switch]$Preview,
     [switch]$SkipBaseUpdate,
-    [string]$WorktreeRulesPath = "__WORKSPACE_ROOT__\rules\worktree.md",
-    [string]$SerenaExe = ""
+    [string]$WorktreeRulesPath = "__WORKSPACE_ROOT__\rules\worktree.md"
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,67 +61,6 @@ function Assert-WorktreeName {
     }
 }
 
-function Resolve-SerenaMode {
-    param([Parameter(Mandatory = $true)][string]$Mode)
-    if ($Mode -ne "Ask") {
-        return $Mode
-    }
-    $answer = Read-Host "Enable Serena for this worktree? Type YES to enable"
-    if ($answer -eq "YES") {
-        return "Enable"
-    }
-    return "Disable"
-}
-
-function Resolve-SerenaExecutable {
-    param([string]$ExplicitPath)
-    if (-not [string]::IsNullOrWhiteSpace($ExplicitPath)) {
-        if (Test-Path -LiteralPath $ExplicitPath) { return (Normalize-PathString $ExplicitPath) }
-        throw "Serena executable not found: $ExplicitPath"
-    }
-    if (-not [string]::IsNullOrWhiteSpace($env:SERENA_EXE)) {
-        if (Test-Path -LiteralPath $env:SERENA_EXE) { return (Normalize-PathString $env:SERENA_EXE) }
-        throw "SERENA_EXE points to a missing file: $env:SERENA_EXE"
-    }
-    $cmd = Get-Command serena -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
-    throw "Serena executable was not found. Install Serena and make 'serena' available in PATH, set SERENA_EXE, or pass -SerenaExe <path>."
-}
-
-function Write-SerenaConfig {
-    param(
-        [Parameter(Mandatory = $true)][string]$WorktreePath,
-        [Parameter(Mandatory = $true)][string]$ExecutablePath
-    )
-    if (-not (Test-Path -LiteralPath $ExecutablePath)) {
-        throw "Serena executable not found: $ExecutablePath"
-    }
-    $codexDir = Join-Path $WorktreePath ".codex"
-    $configPath = Join-Path $codexDir "config.toml"
-    if (-not (Test-Path -LiteralPath $codexDir)) {
-        New-Item -ItemType Directory -Path $codexDir | Out-Null
-    }
-    $block = @"
-
-[mcp_servers.serena]
-command = "$($ExecutablePath.Replace('\', '\\'))"
-args = ["start-mcp-server", "--context=codex", "--project-from-cwd"]
-startup_timeout_sec = 120
-"@
-    if (-not (Test-Path -LiteralPath $configPath)) {
-        Set-Content -LiteralPath $configPath -Value $block.TrimStart() -Encoding UTF8
-        return
-    }
-    $existing = Get-Content -LiteralPath $configPath -Raw
-    if ($existing -match "(?im)^\s*\[mcp_servers\.serena\]") {
-        if ($existing -notmatch [regex]::Escape($ExecutablePath.Replace('\', '\\'))) {
-            throw "Existing Serena config is different. Please review manually: $configPath"
-        }
-        return
-    }
-    Add-Content -LiteralPath $configPath -Value $block -Encoding UTF8
-}
-
 $registry = @(Get-WorktreeRegistry -Path $WorktreeRulesPath)
 if ($registry.Count -eq 0) {
     throw "No projects found in worktree registry."
@@ -137,8 +73,6 @@ if ([string]::IsNullOrWhiteSpace($Name)) {
 }
 Assert-WorktreeName -Value $Name
 
-$serenaMode = Resolve-SerenaMode -Mode $Serena
-$resolvedSerenaExe = if ($serenaMode -eq "Enable") { Resolve-SerenaExecutable -ExplicitPath $SerenaExe } else { "" }
 $branchName = "$Type/$Name"
 $worktreePath = Normalize-PathString (Join-Path $project.WorktreeParent $Name)
 
@@ -166,10 +100,6 @@ Write-Host "  repo: $($project.RepoPath)"
 Write-Host "  worktree: $worktreePath"
 Write-Host "  branch: $branchName"
 Write-Host "  base branch: $BaseBranch"
-Write-Host "  serena: $serenaMode"
-if ($serenaMode -eq "Enable") {
-    Write-Host "  serena exe: $resolvedSerenaExe"
-}
 
 if ($Preview) {
     exit 0
@@ -215,10 +145,6 @@ else {
 git -c safe.directory=* -C $project.RepoPath worktree add -b $branchName $worktreePath $baseRef
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to add worktree."
-}
-
-if ($serenaMode -eq "Enable") {
-    Write-SerenaConfig -WorktreePath $worktreePath -ExecutablePath $resolvedSerenaExe
 }
 
 Write-Host "Done."

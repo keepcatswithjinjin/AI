@@ -21,6 +21,15 @@ artifacts/
 
 新增文件时优先使用可读名称；若产物与日期强相关，可在文件名中加入 `YYYY-MM-DD`。
 
+## 首版人工代码 Review 导航产物
+
+`code-review/<需求名>/` 仅在用户明确要求、首版代码尚未提交时生成，包含 `code-flow.md` 与 `code-flow.html`。它帮助人工在 IDE 中定位本次未提交 diff 的入口、主调用链和关键改动点，不是上线前 Agent Review 报告，也不代表测试或上线结论。
+
+- 不自动创建或更新；
+- 不提交到业务仓库，不维护为 brief；
+- 提交、切换分支或开始上线前 Review 后自动失效；
+- 完整边界见 `__WORKSPACE_ROOT__\rules\first-pass-code-review.md`。
+
 ## 合并冲突核验产物
 
 `merge-verification/<仓库名-哈希>/` 由 `scripts/publish-to-branch.ps1` 自动创建，保存 Git 三方输入、冲突态原文、核验报告和 B 类人工决策记录。

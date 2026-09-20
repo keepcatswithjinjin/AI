@@ -25,13 +25,13 @@
 |------|------|----------|
 | `git-dashboard.cmd` | Windows 入口，查看多项目/worktree 看板 | 想快速查看分支状态、测试分支占用、脏 worktree |
 | `git-dashboard.ps1` | Git 看板主脚本 | 调整看板逻辑、字段、过滤规则时 |
-| `new-worktree.cmd` | Windows 入口，按注册表创建 worktree，并按需写入 Serena 配置 | 新增需求 worktree |
-| `new-worktree.ps1` | Worktree 创建主脚本 | 调整创建流程、分支规则或 Serena 写入逻辑时 |
+| `new-worktree.cmd` | Windows 入口，按注册表创建 worktree | 新增需求 worktree |
+| `new-worktree.ps1` | Worktree 创建主脚本 | 调整创建流程或分支规则时 |
 | `db-analysis.cmd` | 可选：Windows 入口，查询 MySQL 库结构和自定义 SQL | 启用 db-analysis 后，想快速查库、查表、查字段、看建表语句 |
 | `db-analysis.ps1` | 可选：工作区快捷 wrapper，转调全局 `db-analysis` skill 脚本 | 启用 db-analysis 后，调整默认配置路径时 |
 | `db-targets.json` | 可选：本地数据库目标配置 | 启用 db-analysis 后，维护常用数据库连接目标 |
-| `remove-worktree.cmd` | Windows 入口，受控删除 worktree 并清理可归属 Serena 索引 | 删除需求 worktree |
-| `remove-worktree.ps1` | Worktree 删除主脚本 | 调整删除前检查或 Serena 清理逻辑时 |
+| `remove-worktree.cmd` | Windows 入口，受控删除 worktree | 删除需求 worktree |
+| `remove-worktree.ps1` | Worktree 删除主脚本 | 调整删除前检查或残留清理逻辑时 |
 | `publish-to-branch.cmd` | Windows 入口，将当前功能分支的指定文件提交、推送并受控合入指定远端分支 | 功能完成后提交并合入测试/集成分支 |
 | `publish-to-branch.ps1` | 分支发布与冲突核验主脚本 | 调整提交、分支切换、合并、三方输入冻结、核验与推送时 |
 
@@ -59,8 +59,8 @@
 常用命令：
 
 ```powershell
-.\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master -Serena Ask -Preview
-.\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master -Serena Enable
+.\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master -Preview
+.\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master
 ```
 
 约束：
@@ -69,8 +69,7 @@
 - worktree 路径固定为 `__WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>`。
 - 分支名固定为 `feature/<需求名>` 或 `hotfix/<需求名>`。
 - `-Name` 必须是 kebab-case。
-- `-Serena Enable` 会在新 worktree 根目录写入项目级 `.codex/config.toml`。
-- Serena 命令必须使用已验证的可执行文件绝对路径，不自动回退到裸 `serena`。
+- `.mcp.json` 使用该 worktree 的绝对路径，并由 Git 本地排除规则忽略，不会作为业务分支变更；若仓库已跟踪该文件，脚本会停止，避免覆盖团队配置。
 
 ### 3.3 数据库分析（可选）
 
@@ -105,7 +104,7 @@
 ```powershell
 .\scripts\remove-worktree.cmd -WorktreePath "__WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>" -Preview
 .\scripts\remove-worktree.cmd -WorktreePath "__WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>"
-.\scripts\remove-worktree.cmd -WorktreePath "__WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>" -Force -StopSerenaProcesses
+.\scripts\remove-worktree.cmd -WorktreePath "__WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>" -Force
 ```
 
 约束：
@@ -113,11 +112,7 @@
 - 只能删除 `__WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>` 这种具体 worktree 子目录。
 - 默认先检查 Git dirty 状态；若存在未提交或未跟踪变更会拒绝删除，除非人工明确传入 `-Force`。
 - 删除时保留 Git 分支，不执行 `git branch -D`。
-- 若检测到 worktree 启用了 Serena，会清理用户级 Serena `projects` 注册项和可明确归属该 worktree 的 JDTLS workspace 索引目录。
-- 若 Serena/JDTLS 进程仍占用该 worktree 或索引，预览会列出匹配进程和可停止进程；默认不停止进程，只有人工确认后传入 `-StopSerenaProcesses` 才会停止可明确归属 Serena/JDTLS 且排除当前清理脚本自身的进程。
-- 若 worktree 已进入 Git 半删除状态，`-Force` 会进入残留清理模式，继续清理空目录、Git worktree 元数据和 Serena 可归属索引。
-- Serena 的 `sharedIndex` 是跨项目共享缓存，删除单个 worktree 时必须保留。
-- Serena logs 默认保留，用于审计与排障。
+- 若 worktree 已进入 Git 半删除状态，`-Force` 会进入残留清理模式，继续清理空目录和 Git worktree 元数据。
 
 ### 3.5 发布当前功能分支到指定分支
 
@@ -174,7 +169,6 @@
 - 查询数据库目标：若已启用 db-analysis，执行 `.\scripts\db-analysis.cmd -ListTargets`
 - 查询数据库结构：若已启用 db-analysis，执行 `.\scripts\db-analysis.cmd -Target <name> -Action tables|columns|create`
 - 删除 worktree：先执行 `.\scripts\remove-worktree.cmd -WorktreePath <worktree路径> -Preview`，确认后再执行不带 `-Preview` 的删除命令
-- 创建 worktree 并启用 Serena：按 `rules/worktree.md` 写入项目级 `.codex/config.toml`，Serena 命令必须使用已验证的可执行文件绝对路径，不自动回退到裸 `serena`
 - 提交并合入指定测试/集成分支：先执行 `.\scripts\publish-to-branch.cmd ... -Preview`，确认后再去掉 `-Preview`；不要手写 checkout / merge / push 绕过脚本
 - 合并冲突后核验：读取 `rules/merge-verification.md`，按 `VerifyConflict` → `CompleteConflict` 继续；不得绕过脚本直接提交 merge
 

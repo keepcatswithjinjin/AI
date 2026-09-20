@@ -4,10 +4,7 @@ param(
 
     [switch]$Preview,
     [switch]$Force,
-    [switch]$SkipSerenaCleanup,
-    [switch]$StopSerenaProcesses,
 
-    [string]$SerenaConfigPath = "$env:USERPROFILE\.serena\serena_config.yml",
     [string]$WorkspaceWorktreesRoot = "__WORKSPACE_ROOT__\worktrees",
     [string]$WorktreeRulesPath = "__WORKSPACE_ROOT__\rules\worktree.md"
 )
@@ -55,250 +52,6 @@ function Resolve-MainRepoFromRegistry {
         }
     }
     return ""
-}
-
-function Get-Md5Hex {
-    param([Parameter(Mandatory = $true)][string]$Text)
-    $md5 = [System.Security.Cryptography.MD5]::Create()
-    try {
-        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
-        $hash = $md5.ComputeHash($bytes)
-        return (($hash | ForEach-Object { $_.ToString("x2") }) -join "")
-    }
-    finally {
-        $md5.Dispose()
-    }
-}
-
-function Get-DirectorySizeText {
-    param([Parameter(Mandatory = $true)][string]$Path)
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return "0 B"
-    }
-    $sum = (Get-ChildItem -LiteralPath $Path -Force -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
-    if ($null -eq $sum) {
-        $sum = 0
-    }
-    if ($sum -ge 1GB) {
-        return "{0:N2} GB" -f ($sum / 1GB)
-    }
-    if ($sum -ge 1MB) {
-        return "{0:N2} MB" -f ($sum / 1MB)
-    }
-    if ($sum -ge 1KB) {
-        return "{0:N2} KB" -f ($sum / 1KB)
-    }
-    return "$sum B"
-}
-
-function Test-SerenaEnabled {
-    param([Parameter(Mandatory = $true)][string]$Path)
-    $codexConfig = Join-Path $Path ".codex\config.toml"
-    $serenaDir = Join-Path $Path ".serena"
-    if (Test-Path -LiteralPath $serenaDir) {
-        return $true
-    }
-    if (Test-Path -LiteralPath $codexConfig) {
-        $content = Get-Content -LiteralPath $codexConfig -Raw
-        return $content -match "(?im)^\s*\[mcp_servers\.serena\]" -or $content -match "serena"
-    }
-    return $false
-}
-
-function Get-YamlScalar {
-    param(
-        [Parameter(Mandatory = $true)][AllowEmptyString()][string[]]$Lines,
-        [Parameter(Mandatory = $true)][string]$Key
-    )
-    $pattern = "^\s*$([regex]::Escape($Key))\s*:\s*[""']?(.*?)[""']?\s*$"
-    foreach ($line in $Lines) {
-        if ($line -match $pattern) {
-            return $Matches[1]
-        }
-    }
-    return $null
-}
-
-function Get-SerenaJdtlsWorkspaceDirs {
-    param(
-        [Parameter(Mandatory = $true)][string]$ProjectPath,
-        [Parameter(Mandatory = $true)][string]$ConfigPath
-    )
-
-    $candidates = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    $workspaceBase = Join-Path $env:USERPROFILE ".serena\language_servers\static\EclipseJDTLS\workspaces"
-
-    if (-not (Test-Path -LiteralPath $workspaceBase)) {
-        return @()
-    }
-
-    [void]$candidates.Add((Get-Md5Hex $ProjectPath))
-
-    if (Test-Path -LiteralPath $ConfigPath) {
-        $lines = Get-Content -LiteralPath $ConfigPath
-        $jdtlsPath = Get-YamlScalar -Lines $lines -Key "jdtls_path"
-        $javaHome = Get-YamlScalar -Lines $lines -Key "java_home"
-        if ($jdtlsPath -and $javaHome) {
-            $pluginDir = Join-Path $jdtlsPath "plugins"
-            $launcher = Get-ChildItem -LiteralPath $pluginDir -Filter "org.eclipse.equinox.launcher_*.jar" -File -ErrorAction SilentlyContinue |
-                Sort-Object LastWriteTime -Descending |
-                Select-Object -First 1
-            if ($launcher) {
-                $escapedJavaHome = $javaHome.Replace("\", "\\").Replace('"', '\"')
-                $settingsJson = "{""java_home"":""$escapedJavaHome""}"
-                [void]$candidates.Add((Get-Md5Hex ($ProjectPath + "|" + $launcher.FullName + "|" + $settingsJson)))
-            }
-        }
-    }
-
-    $logRoot = Join-Path $env:USERPROFILE ".serena\logs"
-    if (Test-Path -LiteralPath $logRoot) {
-        $escapedProject = [regex]::Escape($ProjectPath)
-        Get-ChildItem -LiteralPath $logRoot -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Length -lt 20MB } |
-            ForEach-Object {
-                $text = Get-Content -LiteralPath $_.FullName -Raw -ErrorAction SilentlyContinue
-                if ($text -and $text -match $escapedProject) {
-                    [regex]::Matches($text, "EclipseJDTLS[\\/]+workspaces[\\/]+([0-9a-fA-F]{32})") |
-                        ForEach-Object { [void]$candidates.Add($_.Groups[1].Value.ToLowerInvariant()) }
-                }
-            }
-    }
-
-    $results = @()
-    foreach ($hash in $candidates) {
-        $dir = Join-Path $workspaceBase $hash
-        if (Test-Path -LiteralPath $dir) {
-            $results += [pscustomobject]@{
-                Hash = $hash
-                Path = (Normalize-PathString $dir)
-                Size = (Get-DirectorySizeText $dir)
-            }
-        }
-    }
-    return $results
-}
-
-function Remove-SerenaProjectRegistration {
-    param(
-        [Parameter(Mandatory = $true)][string]$ProjectPath,
-        [Parameter(Mandatory = $true)][string]$ConfigPath,
-        [Parameter(Mandatory = $true)][bool]$DoWrite
-    )
-
-    if (-not (Test-Path -LiteralPath $ConfigPath)) {
-        return $false
-    }
-
-    $lines = Get-Content -LiteralPath $ConfigPath
-    $target = (Normalize-PathString $ProjectPath)
-    $inProjects = $false
-    $changed = $false
-    $newLines = New-Object System.Collections.Generic.List[string]
-
-    foreach ($line in $lines) {
-        if ($line -match "^\S.*:\s*$") {
-            $inProjects = $line -match "^projects:\s*$"
-        }
-
-        if ($inProjects -and $line -match "^\s*-\s*(.+?)\s*$") {
-            $entry = (Normalize-PathString $Matches[1])
-            if ($entry.Equals($target, [System.StringComparison]::OrdinalIgnoreCase)) {
-                $changed = $true
-                continue
-            }
-        }
-
-        $newLines.Add($line)
-    }
-
-    if ($changed -and $DoWrite) {
-        Set-Content -LiteralPath $ConfigPath -Value $newLines -Encoding UTF8
-    }
-
-    return $changed
-}
-
-function Test-SerenaProjectRegistered {
-    param(
-        [Parameter(Mandatory = $true)][string]$ProjectPath,
-        [Parameter(Mandatory = $true)][string]$ConfigPath
-    )
-    if (-not (Test-Path -LiteralPath $ConfigPath)) {
-        return $false
-    }
-    $target = Normalize-PathString $ProjectPath
-    $inProjects = $false
-    foreach ($line in Get-Content -LiteralPath $ConfigPath) {
-        if ($line -match "^\S.*:\s*$") {
-            $inProjects = $line -match "^projects:\s*$"
-        }
-        if (-not $inProjects) {
-            continue
-        }
-        if ($line -match "^\s*-\s*(.+?)\s*$") {
-            try {
-                $entry = Normalize-PathString $Matches[1]
-            }
-            catch {
-                continue
-            }
-            if ($entry.Equals($target, [System.StringComparison]::OrdinalIgnoreCase)) {
-                return $true
-            }
-        }
-    }
-    return $false
-}
-
-function Get-SerenaProcessMatches {
-    param(
-        [Parameter(Mandatory = $true)][string]$ProjectPath,
-        [Parameter(Mandatory = $true)][object[]]$WorkspaceDirs
-    )
-    $patterns = @([regex]::Escape($ProjectPath))
-    foreach ($item in $WorkspaceDirs) {
-        $patterns += [regex]::Escape([string]$item.Hash)
-        $patterns += [regex]::Escape([string]$item.Path)
-    }
-    $regex = ($patterns | Where-Object { $_ }) -join "|"
-    if (-not $regex) {
-        return @()
-    }
-    try {
-        return @(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match $regex } | Select-Object ProcessId,Name,CommandLine)
-    }
-    catch {
-        Write-Host "Unable to inspect process command lines. Use an elevated run if cleanup is blocked."
-        return @()
-    }
-}
-
-function Get-StoppableSerenaProcesses {
-    param([AllowNull()][object[]]$Processes)
-    if (-not $Processes) {
-        return @()
-    }
-    $currentPid = $PID
-    $stoppableNames = @("java.exe", "cmd.exe", "serena.exe", "python.exe", "python3.exe", "uv.exe")
-    $results = @()
-    foreach ($process in $Processes) {
-        $name = ([string]$process.Name).ToLowerInvariant()
-        $cmd = [string]$process.CommandLine
-        if ([int]$process.ProcessId -eq $currentPid) {
-            continue
-        }
-        if ($cmd -match "remove-worktree\.(cmd|ps1)") {
-            continue
-        }
-        if ($stoppableNames -notcontains $name) {
-            continue
-        }
-        if ($cmd -match "EclipseJDTLS\\workspaces\\|serena-agent|start-mcp-server") {
-            $results += $process
-        }
-    }
-    return $results
 }
 
 $resolvedWorktreePath = Normalize-PathString $WorktreePath
@@ -355,61 +108,19 @@ else {
     }
 }
 
-$serenaWorkspaces = @()
-$serenaRegistered = (-not $SkipSerenaCleanup) -and (Test-SerenaProjectRegistered -ProjectPath $resolvedWorktreePath -ConfigPath $SerenaConfigPath)
-$localSerenaEnabled = (-not $SkipSerenaCleanup) -and (Test-SerenaEnabled -Path $resolvedWorktreePath)
-if (-not $SkipSerenaCleanup) {
-    $serenaWorkspaces = @(Get-SerenaJdtlsWorkspaceDirs -ProjectPath $resolvedWorktreePath -ConfigPath $SerenaConfigPath)
-}
-$serenaEnabled = (-not $SkipSerenaCleanup) -and ($localSerenaEnabled -or $serenaRegistered -or $serenaWorkspaces.Count -gt 0)
-$willUpdateSerenaProjects = $false
-if ($serenaEnabled) {
-    $willUpdateSerenaProjects = Remove-SerenaProjectRegistration -ProjectPath $resolvedWorktreePath -ConfigPath $SerenaConfigPath -DoWrite:$false
-}
-$serenaProcesses = if ($serenaEnabled) { @(Get-SerenaProcessMatches -ProjectPath $resolvedWorktreePath -WorkspaceDirs $serenaWorkspaces) } else { @() }
-$stoppableSerenaProcesses = if ($serenaEnabled) { @(Get-StoppableSerenaProcesses -Processes $serenaProcesses) } else { @() }
-
 Write-Host "Worktree removal plan"
 Write-Host "  worktree: $resolvedWorktreePath"
 Write-Host "  main repo: $mainRepo"
-Write-Host "  serena enabled: $serenaEnabled"
-if ($serenaEnabled) {
-    Write-Host "  serena project registration update: $willUpdateSerenaProjects"
-    Write-Host "  serena JDTLS workspaces: $($serenaWorkspaces.Count)"
-    foreach ($item in $serenaWorkspaces) {
-        Write-Host "    - $($item.Path) ($($item.Size))"
-    }
-    Write-Host "  serena matching processes: $($serenaProcesses.Count)"
-    foreach ($process in $serenaProcesses) {
-        Write-Host "    - $($process.ProcessId) $($process.Name)"
-    }
-    Write-Host "  serena stoppable processes: $($stoppableSerenaProcesses.Count)"
-    foreach ($process in $stoppableSerenaProcesses) {
-        Write-Host "    - $($process.ProcessId) $($process.Name)"
-    }
-    Write-Host "  serena sharedIndex: keep"
-    Write-Host "  serena logs: keep"
-}
 
 if ($Preview) {
     exit 0
 }
 
 if (-not $Force) {
-    $answer = Read-Host "Type YES to remove this worktree and owned Serena indexes"
+    $answer = Read-Host "Type YES to remove this worktree"
     if ($answer -ne "YES") {
         Write-Host "Cancelled."
         exit 1
-    }
-}
-
-if ($stoppableSerenaProcesses.Count -gt 0) {
-    if (-not $StopSerenaProcesses) {
-        Write-Host "Serena/JDTLS processes still reference this worktree or index. Re-run with -StopSerenaProcesses after human approval."
-        exit 3
-    }
-    foreach ($process in $stoppableSerenaProcesses) {
-        Stop-Process -Id $process.ProcessId -Force
     }
 }
 
@@ -443,16 +154,6 @@ if (Test-Path -LiteralPath $gitMetaPath) {
         throw "Git metadata residue safety check failed: $resolvedMeta"
     }
     Remove-Item -LiteralPath $resolvedMeta -Recurse -Force
-}
-
-if ($serenaEnabled) {
-    [void](Remove-SerenaProjectRegistration -ProjectPath $resolvedWorktreePath -ConfigPath $SerenaConfigPath -DoWrite:$true)
-    foreach ($item in $serenaWorkspaces) {
-        $workspaceBase = Normalize-PathString (Join-Path $env:USERPROFILE ".serena\language_servers\static\EclipseJDTLS\workspaces")
-        if (Test-IsUnderPath -Child $item.Path -Parent $workspaceBase) {
-            Remove-Item -LiteralPath $item.Path -Recurse -Force
-        }
-    }
 }
 
 Write-Host "Done."

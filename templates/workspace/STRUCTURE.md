@@ -12,13 +12,13 @@
 | `CLAUDE.md` | Agent 入口 | Claude 在根目录的操作路由 | 手工维护 |
 | `AGENTS.md` | Agent 入口 | Codex/通用 Agent 在根目录的操作路由 | 手工维护 |
 | `scripts/git-dashboard.cmd` / `scripts/git-dashboard.ps1` | 工具入口 | Windows 下查看 Git/worktree 状态 | 随脚本维护 |
-| `scripts/new-worktree.cmd` / `scripts/new-worktree.ps1` | 工具入口 | Windows 下受控新增 worktree，并按需写入 Serena 配置 | 随脚本维护 |
+| `scripts/new-worktree.cmd` / `scripts/new-worktree.ps1` | 工具入口 | Windows 下受控新增 worktree | 随脚本维护 |
 | `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | 可选工具入口 | Windows 下查询 MySQL 数据库结构和分析 SQL | 启用数据库能力时随脚本维护 |
 | `scripts/db-targets.json` | 可选本地状态 | 记录常用数据库连接目标 | 手工维护，不提交 |
 | `.codex/mcp/yunxiao-mcp.cmd` | 可选工具入口 | 启动工作站本地云效 MCP | 启用云效能力时随模板维护 |
 | `.codex/secrets/yunxiao.env.cmd` | 可选本地状态 | 记录云效 token 环境变量 | 手工维护，不提交 |
 | `.codex/secrets/yunxiao.personal.json` | 可选本地状态 | 记录个人云效组织、项目、别名和可选流水线白名单 | 手工维护，不提交 |
-| `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 工具入口 | 受控删除 worktree，并清理可归属 Serena 索引 | 随脚本维护 |
+| `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 工具入口 | 受控删除 worktree | 随脚本维护 |
 | `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 工具入口 | 受控提交、合入指定分支；冲突时冻结输入、核验后恢复功能分支 | 随脚本维护 |
 | `scripts/INDEX.md` | 脚本索引 | 说明 scripts 内脚本和状态文件职责 | 手工维护 |
 | `vibe-coding-新项目初始化指南.md` | 流程指南 | 新项目接入当前工作区 | 手工维护 |
@@ -32,6 +32,7 @@
 | `rules/frontend-role-guide.md` | 角色规则 | cross 需求中同一 Agent 的前端角色职责 | 手工维护 |
 | `rules/tester-note.md` | 输出规则 | 给测试同事看的功能测试说明、测试入口和回归范围规范 | 手工维护 |
 | `rules/change-report.md` | 输出规则 | 面向开发者/负责人的改动范围、影响范围和未改旧逻辑证明规范 | 手工维护 |
+| `rules/first-pass-code-review.md` | 输出规则 | 提交前首版人工代码核对的调用链导航与流程图边界；仅用户明确触发 | 手工维护 |
 | `rules/review-standard.md` / `rules/review-report.md` / `rules/review-role-guide.md` | 输出规则 | 上线前 Review 标准、报告结构和独立角色边界 | 手工维护 |
 | `rules/merge-verification.md` | 流程规则 | Git 冲突输入冻结、分类核验、人工决策和编译边界 | 手工维护 |
 | `scripts/` | 脚本目录 | 工作区自动化脚本 | 按工具维护 |
@@ -63,8 +64,9 @@
 | 通用后端编码习惯 | `rules/backend-coding-style.md` | 项目特有规则保留在项目级 `AGENTS.md` / `CLAUDE.md` |
 | 给测试同事的测试说明规范 | `rules/tester-note.md` | 只定义输出格式、回归范围判断和写作边界，不替代测试方案 |
 | 面向开发者的改动检查报告规范 | `rules/change-report.md` | 只定义改动范围、影响范围和未改旧逻辑证明，不替代测试说明 |
+| 首版人工代码核对导航 | `rules/first-pass-code-review.md` | 基于当前未提交 diff 生成导航和流程图；不属于上线前 Agent Review |
 | 保存型文件产物 | `artifacts/` | 不进入 `briefs/INDEX.md` 或 `briefs/WORKTREE-INDEX.md`，不用于推断需求状态 |
-| Worktree 删除入口 | `scripts/remove-worktree.ps1` | 统一执行删除前检查和 Serena 可归属索引清理 |
+| Worktree 删除入口 | `scripts/remove-worktree.ps1` | 统一执行删除前检查和残留清理 |
 | 功能分支发布入口 | `scripts/publish-to-branch.ps1` | 统一执行文件范围检查、源分支推送、目标分支合并与恢复源分支 |
 | 合并冲突核验 | `rules/merge-verification.md` + `scripts/publish-to-branch.ps1` | 冲突时冻结三方输入；核验通过并显式确认后才提交、推送 |
 | 脚本目录路由 | `scripts/INDEX.md` | 只做脚本入口说明，不复制脚本实现 |
@@ -112,6 +114,7 @@ __WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>
 | 调整后端编码习惯 | `rules/backend-coding-style.md`、`rules/backend-role-guide.md`、`README.md`、`STRUCTURE.md` |
 | 调整测试同事说明规范 | `rules/tester-note.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
 | 调整改动检查报告规范 | `rules/change-report.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
+| 调整首版人工代码 Review 导航规范 | `rules/first-pass-code-review.md`、`artifacts/README.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
 | 调整上线前 Review 或合并冲突核验 | `rules/review-standard.md`、`rules/review-report.md`、`rules/review-role-guide.md`、`rules/merge-verification.md`、`scripts/publish-to-branch.ps1`、`scripts/INDEX.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
 | 调整新项目接入流程 | `vibe-coding-新项目初始化指南.md`、`STRUCTURE.md` |
 | 调整交接要求 | `rules/handoff.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |

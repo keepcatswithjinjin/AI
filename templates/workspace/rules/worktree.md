@@ -29,6 +29,15 @@ __WORKSPACE_ROOT__\
 
 ---
 
+## 根项目 master 边界
+
+- 根项目的 `master` 只用于基线同步、只读代码理解，以及用户明确要求的本次业务需求和其直接连带文档。
+- Agent 不得在根项目 `master` 新增、修改或迁移治理规则、Hook / Agent 配置、工作站脚本、项目导航、知识库或其他与本次业务无关的文档。
+- 需要维护工作站、治理或通用 Agent 能力时，只能在工作站目录维护；需要修改业务代码时，必须在该需求对应的 worktree 分支中执行。
+- 如果用户明确要求在 `master` 修改非业务内容，先说明该动作突破本边界，并等待用户再次确认；不得将“便于当前 Agent 使用”视为业务连带理由。
+
+---
+
 ## 创建 Worktree
 
 AI 检测到用户意图为"创建 worktree"时，按以下交互流程执行：
@@ -68,40 +77,6 @@ feature 还是 hotfix？
 - 指定现有分支时，创建前必须先确认该分支在本地或远端存在；不存在则停止并提示用户确认分支名。
 - 除非用户明确要求，不自动从非 `master` 分支创建。
 
-### Step 5: 选择是否启用 Serena
-
-询问用户：
-
-```
-是否为该 worktree 启用 Serena？
-- 是：在 worktree 根目录写入项目级 `.codex/config.toml`，Serena 仅索引该 worktree（复杂需求推荐）
-- 否：不写入 Serena 配置（简单需求默认）
-```
-
-约束：
-
-- 默认不启用 Serena，除非用户明确选择或本次需求已判断为复杂需求且用户确认需要。
-- Serena 只允许在项目根或 worktree 根目录启用，禁止在 `__WORKSPACE_ROOT__` 根目录启用，避免将整个多项目工作区建索引。
-- 若 worktree 根目录下 `.codex/` 不存在，则创建 `.codex/`；若 `.codex/config.toml` 不存在，则新增。
-- 若 `.codex/config.toml` 已存在，只追加或补全 Serena MCP 配置，不覆盖已有项目级配置；尤其不得重写工作站治理 hooks。
-- Serena 配置用于桌面端新开到该 worktree 目录的 task；在 `__WORKSPACE_ROOT__` 根 session 中创建 worktree 后，本 session 不会自动加载新 worktree 的项目级配置。
-
-推荐写入内容：
-
-```toml
-[mcp_servers.serena]
-command = "<your-serena-executable>"
-args = ["start-mcp-server", "--context=codex", "--project-from-cwd"]
-startup_timeout_sec = 120
-```
-
-约束：
-
-- Serena 启动命令由使用者本机环境提供，可通过 -SerenaExe、SERENA_EXE 或 PATH 解析。
-- 模板不写死任何用户机器上的 Serena 路径。
-- 若无法解析 Serena 可执行文件，必须先停止并提示用户安装 Serena、设置 SERENA_EXE 或传入 -SerenaExe。
-- `--project-from-cwd` 必须保留，使 Codex 桌面端进入不同 worktree 时按当前目录决定 Serena 项目边界。
-
 ### 脚本入口
 
 新增 worktree 必须使用 `__WORKSPACE_ROOT__\scripts\new-worktree.cmd`，包括从项目根目录启动的 Agent 会话；项目级 `AGENTS.md` / `CLAUDE.md` 应路由到本规则和 `scripts/INDEX.md`。
@@ -115,18 +90,18 @@ Agent 不得用手写底层 Git 创建命令代替该脚本，也不得因目标
 预览示例：
 
 ```powershell
-__WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master -Serena Ask -Preview
+__WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master -Preview
 ```
 
 创建示例：
 
 ```powershell
-__WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master -Serena Enable
+__WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Type feature -BaseBranch master
 ```
 
 ### 底层动作说明（不可直接调用）
 
-脚本负责创建父目录、更新或核验基线分支、创建并注册 Git worktree、按需写入 Serena 配置。此处不提供可复制的底层 Git 命令；实际创建入口只有上述脚本。
+脚本负责创建父目录、更新或核验基线分支、创建并注册 Git worktree。此处不提供可复制的底层 Git 命令；实际创建入口只有上述脚本。
 
 ### 规则
 
@@ -135,18 +110,9 @@ __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-fea
 3. **分支命名**：`feature/<需求名>` 或 `hotfix/<需求名>`
 4. **基于分支**：默认基于最新 `master`；有特殊需求时允许用户指定已存在分支
 5. **已有旧 worktree 不迁移**
-6. **Serena 按需启用**：创建 worktree 时必须询问是否启用 Serena；启用时仅写入该 worktree 根目录的项目级 `.codex/config.toml`
-7. **同步代码位置索引**：创建完成后必须更新 `briefs/WORKTREE-INDEX.md`，记录 brief、代码位置和分支
+6. **同步代码位置索引**：创建完成后必须更新 `briefs/WORKTREE-INDEX.md`，记录 brief、代码位置和分支
 
 ---
-
-## Serena 启用边界
-
-- `__WORKSPACE_ROOT__` 是多项目调度层，不是代码项目，禁止在 `__WORKSPACE_ROOT__\.codex/config.toml` 中启用 Serena。
-- 简单需求通常不需要 Serena，可在工作区根 session 中直接处理低风险改动。
-- 复杂需求需要 Serena 时，应先创建 worktree 并写入项目级 `.codex/config.toml`，然后在 Codex 桌面端新开 task，目录选择该 worktree 根目录。
-- 需求方案设计或复杂代码理解中，若需要大量查询函数、类、引用、调用关系，可优先考虑使用已启用 worktree 中的 Serena 工具；简单文本检索和文件定位仍使用 `rg`。
-- 后续若验证 Serena 效果稳定，可考虑通过 Hook 强制检查：新建复杂需求 worktree 时必须显式记录是否启用 Serena，并对跳过启用的情况要求人工确认。
 
 ## 临时发布到测试或集成分支
 
@@ -162,22 +128,15 @@ __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-fea
 
 1. **读取脚本索引**：先读取 `__WORKSPACE_ROOT__\scripts\INDEX.md`
 2. **预览删除计划**：执行 `__WORKSPACE_ROOT__\scripts\remove-worktree.cmd -WorktreePath <worktree路径> -Preview`
-3. **用户确认**：向用户展示预览结果，确认是否删除 worktree、清理可归属 Serena 索引
+3. **用户确认**：向用户展示预览结果，确认是否删除 worktree
 4. **执行删除**：确认后执行 `__WORKSPACE_ROOT__\scripts\remove-worktree.cmd -WorktreePath <worktree路径>`
 5. **Dirty 场景**：若脚本提示存在未提交或未跟踪变更，必须先让用户确认；只有用户明确接受删除这些变更时，才可追加 `-Force`
-6. **Serena 进程占用**：若预览列出 Serena/JDTLS 进程，默认停止删除；只有用户明确同意时，才可追加 `-StopSerenaProcesses` 停止可明确归属 Serena/JDTLS 且排除当前清理脚本自身的进程
-7. **半删除状态**：若 worktree 已不是完整 Git worktree，但仍位于安全边界内，允许脚本在 `-Force` 下进入残留清理模式
+6. **半删除状态**：若 worktree 已不是完整 Git worktree，但仍位于安全边界内，允许脚本在 `-Force` 下进入残留清理模式
 
 **强制约束**：
 - ✅ 删除 `worktrees/<项目>-worktree/<name>/`（worktree 项目目录）
 - ✅ 保留 git 分支（`git worktree remove` 不会删除分支）
 - ✅ 删除后必须同步更新 `briefs/WORKTREE-INDEX.md` 中对应代码位置
-- ✅ 若启用了 Serena，删除时必须清理用户级 Serena `projects` 注册项
-- ✅ 若启用了 Serena，删除时必须清理可明确归属该 worktree 的 JDTLS workspace 索引目录
-- ✅ Serena 的项目级 `.serena/` 随 worktree 目录一同删除
-- ✅ Serena 的 `sharedIndex` 是跨项目共享缓存，删除单个 worktree 时必须保留
-- ✅ Serena logs 默认保留，用于审计与排障
-- ✅ Serena/JDTLS 进程占用时，必须列出匹配进程和可停止进程，并取得用户确认后才可停止可停止进程
 - ✅ Git 半删除残留只允许清理所属主仓库 `.git\worktrees\<name>` 下的精确目录
 - ❌ **禁止**删除 `worktrees/<项目>-worktree/` 父目录本身
 - ❌ **禁止**删除 `<Project>/` 根项目目录
@@ -199,26 +158,6 @@ __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-fea
 - 单端需求的代码位置与分支
 
 禁止维护 Agent 会话名、恢复状态、当前进度等易漂移信息。最终执行 Git 操作前，仍必须实时执行 Git 查询确认。
-
-## Worktree 删除时的 Serena 清理规则
-
-当待删除 worktree 满足以下任一条件时，视为启用了 Serena：
-
-- worktree 根目录存在 `.serena/`
-- worktree 根目录存在 `.codex/config.toml` 且包含 `[mcp_servers.serena]`
-
-删除时必须同步检查并清理：
-
-1. **项目级 Serena 目录**：`.serena/` 随 worktree 目录一起删除
-2. **用户级项目注册**：从 `C:\Users\<user>\.serena\serena_config.yml` 的 `projects` 中移除该 worktree 路径
-3. **JDTLS workspace 索引**：删除 `C:\Users\<user>\.serena\language_servers\static\EclipseJDTLS\workspaces\<hash>` 中可明确归属该 worktree 的目录
-
-删除时必须保留：
-
-- `C:\Users\<user>\.serena\language_servers\static\lsp\EclipseJDTLS\sharedIndex`：跨项目共享缓存
-- `C:\Users\<user>\.serena\logs`：审计与排障日志
-
-若脚本无法明确定位 JDTLS workspace 归属，只删除 worktree 和项目注册，不猜测删除共享或未知缓存。
 
 ## 历史 Worktree 处理
 

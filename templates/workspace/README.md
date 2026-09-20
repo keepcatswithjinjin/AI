@@ -9,13 +9,13 @@
 | `CLAUDE.md` / `AGENTS.md` | Agent 入口与操作路由 |
 | `STRUCTURE.md` | 全局结构地图和维护检查清单 |
 | `scripts/git-dashboard.cmd` / `scripts/git-dashboard.ps1` | Git/worktree 状态仪表盘入口 |
-| `scripts/new-worktree.cmd` / `scripts/new-worktree.ps1` | 受控新增 worktree，并按需写入 Serena 配置 |
+| `scripts/new-worktree.cmd` / `scripts/new-worktree.ps1` | 受控新增 worktree |
 | `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | 可选：MySQL 数据库结构查询和分析入口，转调全局 `db-analysis` skill |
 | `scripts/db-targets.json` | 可选：本地数据库目标配置 |
 | `.codex/mcp/yunxiao-mcp.cmd` | 可选：云效 MCP 本地启动入口 |
 | `.codex/secrets/yunxiao.env.example.cmd` | 可选：云效 token 环境变量示例 |
 | `.codex/secrets/yunxiao.personal.example.json` | 可选：云效个人组织/项目路由示例 |
-| `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 受控删除 worktree，并清理可归属 Serena 索引 |
+| `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 受控删除 worktree |
 | `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 受控提交、合入指定分支；冲突时冻结输入、核验后恢复功能分支 |
 | `scripts/INDEX.md` | scripts 目录索引，说明脚本和状态文件职责 |
 | `.codex/config.toml` | Codex 工作站本地 Hook 注册入口 |
@@ -54,6 +54,7 @@
 | 执行后端代码修改 | `rules\backend-role-guide.md` → `rules\backend-coding-style.md` + 项目级 `AGENTS.md` / `CLAUDE.md` |
 | 生成给测试同事的测试说明 | `rules\tester-note.md` |
 | 生成面向开发者的检查报告 | `rules\change-report.md` |
+| 生成提交前首版人工代码核对导航图 | `rules\first-pass-code-review.md`（仅用户明确触发） |
 | 进行上线前代码 Review | `rules\review-role-guide.md` → `rules\review-standard.md` → `rules\review-report.md` |
 | 引入新项目 | `vibe-coding-新项目初始化指南.md` |
 | 查看规则维护点 | `rules/INDEX.md` |
@@ -66,6 +67,7 @@
 ## 核心约定
 
 - `__WORKSPACE_ROOT__` 是工作区容器，不作为 Git 仓库管理；Git 操作仅在登记项目及其 worktree 内执行。
+- 根项目 `master` 只保留基线和用户明确要求的本次业务及直接连带文档；治理、Agent 配置、工作站能力和其他非业务内容不得直接写入 `master`。
 - 根目录 session 只做设计和调度，不写业务代码。
 - 根目录允许运行只读 Git 仪表盘，用于查看项目、worktree、测试分支占用；看板查询不需要额外总结。
 - Codex / Claude Code 的工作站治理 Hook 只注册在当前工作站 local 配置中，不写入用户级配置。
@@ -78,9 +80,8 @@
 - `artifacts/` 只保存需要沉淀的文件产物，不用来推断需求状态、代码位置或分支。
 - 简单需求不创建独立 brief，也不登记索引；以当前明确范围与 diff 作为执行和 Review 边界。
 - 复杂需求使用 `design.md`、对应执行计划及适用接口契约；不维护独立需求文档。用户只审核自包含的 `design.md`。执行 Agent 按最新决定同步设计、契约与计划，提交前核对当前 diff 和未确认偏离。
-- 新增 worktree 若启用 Serena，必须按 `rules/worktree.md` 写入项目级 `.codex/config.toml`，并使用已验证的 Serena 可执行文件绝对路径。
-- 需求方案设计或复杂代码理解中，如需要大量查询函数、类、引用、调用关系，可优先考虑在启用 Serena 的 worktree 中使用 Serena；文本检索和简单定位仍可使用 `rg`。
-- 删除 worktree 优先使用 `scripts\remove-worktree.cmd`；启用 Serena 的 worktree 会同步清理用户级项目注册和可归属 JDTLS workspace 索引，保留共享索引与日志。
+- 提交前首版人工代码核对导航仅在用户明确触发时生成到 `artifacts\code-review\<需求名>`；它只解释当前未提交 diff 的入口、调用链和关键变更，不属于上线前 Agent Review，也不输出风险或上线结论。
+- 删除 worktree 优先使用 `scripts\remove-worktree.cmd`；删除前先预览，确认后才执行。
 - 功能分支提交并合入测试/集成分支优先使用 `scripts\publish-to-branch.cmd`；它先推送并修正当前分支 upstream。冲突时冻结输入，人工解决后必须 `VerifyConflict`，只有通过并显式 `CompleteConflict` 才会提交、推送和恢复源分支。
 - Review 只审查本次 diff 引入的问题及直接调用链；历史问题、未触及模块与合并冲突过程不纳入 Review 问题清单。
 - 数据库分析与云效任务管理是初始化脚本的可选能力；未安装时，Agent 应说明能力未启用，而不是猜测入口。

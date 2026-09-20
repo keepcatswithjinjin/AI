@@ -68,7 +68,7 @@ The guard blocks:
 - direct `mysql`/`mariadb` shell usage;
 - destructive or sensitive ad-hoc SQL passed to the workspace DB wrapper.
 - direct `git worktree add/remove`; worktree lifecycle must go through the workspace
-  scripts so Serena and workspace state are handled consistently;
+  scripts so path, branch, confirmation, and workspace state are handled consistently;
 - Agent invocations of the worktree create/remove scripts without `-OutputFormat Json`;
   the resulting `workflow-result.v1` is the required machine-readable evidence.
 - destructive Git operations including branch deletion, `reset --hard`, forced

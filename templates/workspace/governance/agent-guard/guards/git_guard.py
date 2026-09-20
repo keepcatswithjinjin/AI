@@ -53,9 +53,9 @@ def check_git_command(command: str, policy: dict[str, Any], cwd: str) -> str | N
         if subcommand == "worktree" and rest:
             action = rest[0].lower()
             if action == "add" and git_policy.get("deny_direct_worktree_add", True):
-                return f"Direct git worktree add is blocked. Use {ROOT / 'scripts' / 'new-worktree.cmd'} so path, branch, and Serena rules are enforced."
+                return f"Direct git worktree add is blocked. Use {ROOT / 'scripts' / 'new-worktree.cmd'} so path and branch rules are enforced."
             if action == "remove" and git_policy.get("deny_direct_worktree_remove", True):
-                return f"Direct git worktree remove is blocked. Use {ROOT / 'scripts' / 'remove-worktree.cmd'} so workspace state and Serena indexes are cleaned safely."
+                return f"Direct git worktree remove is blocked. Use {ROOT / 'scripts' / 'remove-worktree.cmd'} so workspace state is cleaned safely."
         if subcommand == "branch" and git_policy.get("deny_branch_delete", True):
             if any(flag in {"-d", "--delete"} for flag in lowered):
                 return "Direct git branch deletion is blocked. Confirm branch cleanup separately."
