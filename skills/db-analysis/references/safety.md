@@ -27,6 +27,11 @@ For `-Action query`, only these statement families are allowed:
 
 The script rejects multi-statement SQL and common write/admin operations.
 
+For PostgreSQL-compatible targets, it additionally rejects `SELECT INTO`,
+`COPY`, `DO`, `CALL`, locking clauses, maintenance commands, and known
+server-control functions. It requires explicit approved `schema.table` sources
+and supplies a read-only session setting plus a bounded statement timeout.
+
 ## Operating rule
 
-If the account check fails, create a dedicated read-only account instead of bypassing the script.
+If the account check fails, create a dedicated read-only account instead of bypassing the script. The only exception is a deliberately configured test target with both `environment: test` and `allowPrivilegedTestAccount: true`; its SQL checks remain read-only and it must still be allowed by the Hook policy.

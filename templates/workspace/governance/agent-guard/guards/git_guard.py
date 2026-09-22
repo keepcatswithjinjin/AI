@@ -43,10 +43,16 @@ def git_command_parts(args: list[str]) -> tuple[str, list[str], str]:
 
 def check_git_command(command: str, policy: dict[str, Any], cwd: str) -> str | None:
     git_policy = policy.get("git", {}) if isinstance(policy.get("git"), dict) else {}
-    for segment in command_segments(command):
+    segments = command_segments(command)
+    has_git_command = False
+    for segment in segments:
         tokens = shell_tokens(segment)
         if not tokens or not is_git_token(tokens[0]):
             continue
+        has_git_command = True
+        lowered_segment = segment.lower()
+        if "--no-verify" in lowered_segment or "core.hookspath" in lowered_segment:
+            return f"Direct local Git hook bypass is blocked. After human approval, use {ROOT / 'scripts' / 'publish-to-branch.cmd'} with -Mode CompleteConflict -ConfirmConflictCompletion -UseHumanCompletionApproval."
         subcommand, rest, git_cwd = git_command_parts(tokens[1:])
         effective_cwd = normalize(git_cwd or cwd)
         lowered = [item.lower() for item in rest]
@@ -70,4 +76,6 @@ def check_git_command(command: str, policy: dict[str, Any], cwd: str) -> str | N
         if subcommand == "init" and git_policy.get("deny_workspace_root_init", True):
             if effective_cwd == normalize(str(ROOT)):
                 return "git init in the workspace root is blocked. The workspace root is a container, not a git repository."
+    if has_git_command and "git_config_key_" in command.lower():
+        return f"Direct local Git hook bypass is blocked. After human approval, use {ROOT / 'scripts' / 'publish-to-branch.cmd'} with -Mode CompleteConflict -ConfirmConflictCompletion -UseHumanCompletionApproval."
     return None

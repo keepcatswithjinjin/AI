@@ -10,7 +10,7 @@ The skill contains reusable logic, not private environment configuration.
 |------|----------|---------|
 | Skill script | `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | Portable database inspection tool |
 | Example config | `scripts/db-targets.example.json` | Template for local target config |
-| Real config | User-chosen private path | Host, port, database, user and private option-file path |
+| Real config | User-chosen private path | Host, port, database, user, password |
 | Project profile | User-chosen project/profile path | Optional business table notes |
 
 Do not store real credentials in the skill directory if the skill will be shared.
@@ -22,7 +22,7 @@ Choose one private config path and pass it with `-ConfigPath`.
 For this user's Col workstation:
 
 ```text
-__WORKSPACE_ROOT__\scripts\db-targets.json
+D:\Col\scripts\db-targets.json
 ```
 
 For a reusable toolkit or another machine:
@@ -38,9 +38,8 @@ The skill does not hard-code these paths. They are examples. The caller must pas
 
 1. Copy `scripts/db-targets.example.json` to a private local path.
 2. Fill in target connection values.
-3. For password authentication, put `password=...` in a local `[client]` option file and set its absolute path as `clientDefaultsFile`; do not put the password in shared configuration.
-4. Use a database account that only has read permissions.
-5. Run `grants` or `ping` before schema exploration.
+3. Use a database account that only has read permissions.
+4. Run `grants` or `ping` before schema exploration.
 
 Example using the skill script directly:
 
@@ -52,11 +51,11 @@ Example using the skill script directly:
 Example from the Col workstation wrapper:
 
 ```powershell
-__WORKSPACE_ROOT__\scripts\db-analysis.cmd -ListTargets
-__WORKSPACE_ROOT__\scripts\db-analysis.cmd -Target sample-local -Action ping
+D:\Col\scripts\db-analysis.cmd -ListTargets
+D:\Col\scripts\db-analysis.cmd -Target sample-local -Action ping
 ```
 
-The Col wrapper defaults `-ConfigPath` to `__WORKSPACE_ROOT__\scripts\db-targets.json`.
+The Col wrapper defaults `-ConfigPath` to `D:\Col\scripts\db-targets.json`.
 
 ## Config Format
 
@@ -70,7 +69,7 @@ The Col wrapper defaults `-ConfigPath` to `__WORKSPACE_ROOT__\scripts\db-targets
       "port": 3306,
       "database": "demo_db",
       "user": "readonly_user",
-      "clientDefaultsFile": "D:\\private\\mysql\\local-readonly.cnf",
+      "password": "",
       "note": "Local readonly database"
     }
   ]

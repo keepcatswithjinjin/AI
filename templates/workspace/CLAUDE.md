@@ -54,6 +54,8 @@
 
 ## 三、操作路由
 
+> **首版代码 Review 流程图禁令**：除非用户在当前对话明确要求“生成首版代码 Review 导航图”“生成未提交 diff 调用链图”或同等意图，否则禁止生成、更新或预创建 `artifacts\code-review\` 下的任何目录、`code-flow.md` 或图文件。开发完成、存在 diff、准备提交、用户要求检查报告或上线前 Review，均不构成默认生成授权。
+
 | 场景 | 读取文件 | 说明 |
 |------|---------|------|
 | 检查整体结构 | `STRUCTURE.md` | 了解全局目录、唯一真相源和更新检查规则 |
@@ -109,6 +111,8 @@
 .\scripts\db-analysis.cmd -ListTargets
 .\scripts\db-analysis.cmd -Target <name> -Action tables
 ```
+
+PostgreSQL/Hologres targets additionally require `-Database <database>` and `-Schema <schema>`; see `scripts/INDEX.md` for the safe command form.
 
 当用户要求“查云效任务 / 查工作项 / 查需求 / 查迭代 / 创建或更新云效工作项 / 查看流水线”时，先检查 `.codex/skills/yunxiao-workstation/SKILL.md` 是否存在。若不存在，说明 Yunxiao 可选能力未启用；若存在，必须先读取该 skill，再使用工作站本地 `yunxiao` MCP。不要把云效 token 写入回复、提交信息或共享文档。创建、更新、评论、状态流转或运行流水线前必须先展示中文预案并等待人工确认。流水线自动化默认未启用；只有本地个人配置白名单中的流水线才允许执行。
 

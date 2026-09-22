@@ -43,6 +43,8 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 
 如需使用，将 `skills/db-analysis` 复制到 Codex 的 skill 目录（通常是 `%USERPROFILE%\.codex\skills\db-analysis`）。复制 `scripts/db-targets.example.json` 为安装后工作区的 `scripts/db-targets.json`，只在本机填写只读账号。
 
+MySQL 使用本机私有 `clientDefaultsFile`；PostgreSQL/Hologres 使用本机私有 `pgPassFile`，格式为 `host:port:database:user:password`。Hologres 与 PostgreSQL 的对象层级是“实例 → database → schema → table”，因此目标必须维护 `allowedDatabases` 和 `allowedSchemas`，查询时显式传入 `-Database`、`-Schema` 并使用 `schema.table`。
+
 `db-targets.json`、`maintenance-approval.json` 和所有真实凭据必须保持本地文件，不提交 Git。策略中的 `allowed_targets` 必须与本地目标名一致；`allowed_read_actions` 仅应包含允许的只读操作。
 
 ## 4. 配置云效任务管理（可选）

@@ -11,6 +11,7 @@ from guard_utils import matches
 ROOT = Path(r"__WORKSPACE_ROOT__")
 POLICY_PATH = ROOT / "governance" / "agent-guard" / "policy.json"
 MAINTENANCE_APPROVAL_PATH = ROOT / "governance" / "agent-guard" / "maintenance-approval.json"
+LOCAL_GIT_HOOK_BYPASS_APPROVAL_PATH = ROOT / "governance" / "agent-guard" / "local-git-hook-bypass-approval.json"
 
 
 def root_pattern(*parts: str) -> str:
@@ -22,9 +23,12 @@ BASELINE_PROTECTED = [
     root_pattern("scripts", "db-targets.json"),
     root_pattern("scripts", "db-analysis.cmd"),
     root_pattern("scripts", "db-analysis.ps1"),
+    root_pattern("scripts", "publish-to-branch.cmd"),
+    root_pattern("scripts", "publish-to-branch.ps1"),
     root_pattern(".codex", "config.toml"),
     root_pattern(".claude", "settings.local.json"),
     root_pattern("governance", "agent-guard", "maintenance-approval.json"),
+    root_pattern("governance", "agent-guard", "local-git-hook-bypass-approval.json"),
 ]
 
 
@@ -50,7 +54,7 @@ def load_maintenance_approval() -> bool:
 
 def maintenance_approval_is_active(path: str) -> bool:
     """The approval file itself remains immutable during a maintenance window."""
-    if matches(path, [str(MAINTENANCE_APPROVAL_PATH)]):
+    if matches(path, [str(MAINTENANCE_APPROVAL_PATH), str(LOCAL_GIT_HOOK_BYPASS_APPROVAL_PATH)]):
         return False
     return load_maintenance_approval()
 

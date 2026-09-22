@@ -73,6 +73,9 @@ The guard blocks:
   the resulting `workflow-result.v1` is the required machine-readable evidence.
 - destructive Git operations including branch deletion, `reset --hard`, forced
   clean, force/delete push, and `git init` in the `__WORKSPACE_ROOT__` root.
+- direct local Git Hook bypasses such as `--no-verify`, `core.hooksPath`, and
+  `GIT_CONFIG_*` overrides. The only bounded exception is the approved
+  `publish-to-branch` completion flow below.
 
 The guard intentionally allows non-actions and read-only references:
 
@@ -93,4 +96,27 @@ branch protections. Database operations must continue through
 `__WORKSPACE_ROOT__\scripts\db-analysis.cmd`.
 
 `PostToolUse` is intentionally registered only for Bash and exits immediately for every command except non-preview `new-worktree` and `remove-worktree`. If Codex supplies a malformed PostToolUse payload, it is skipped unless its raw payload appears to contain either lifecycle script; those still fail closed. For lifecycle commands it independently verifies the filesystem and Git worktree registration.
+
+## Approved local Git Hook bypass
+
+This exception exists only for a verified merge already stopped by a local Git
+Hook or an Agent runtime that rejects the equivalent command-line workaround.
+It is not a general permission switch and does not bypass remote CI, branch
+protection, conflict verification, compilation, or any database guard.
+
+After `VerifyConflict` reports `passed`, a human may manually create
+`local-git-hook-bypass-approval.json` from
+`local-git-hook-bypass-approval.example.json`. The exact JSON is:
+
+```json
+{ "enabled": true, "scope": "publish-to-branch.complete-conflict" }
+```
+
+Then run the normal protected entrypoint with
+`-Mode CompleteConflict -ConfirmConflictCompletion -UseHumanCompletionApproval`.
+Only that script, only for its merge `commit` and target `push`, points Git to
+the protected empty `empty-git-hooks` directory. The approval file remains
+agent-immutable even while `maintenance-approval.json` is enabled. The script
+records the approval in the merge report. Remove the approval file manually
+when that completion attempt is finished.
 

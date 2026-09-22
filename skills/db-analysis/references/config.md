@@ -11,7 +11,7 @@ The skill must not own real database credentials. A caller provides a config fil
 For a personal workstation wrapper:
 
 ```text
-__WORKSPACE_ROOT__\scripts\db-targets.json
+D:\Col\scripts\db-targets.json
 ```
 
 For a reusable toolkit:
@@ -31,7 +31,7 @@ These are conventions, not hard-coded skill requirements.
 ## Fields
 
 - `name`: stable target name used by `-Target`
-- `type`: currently only `mysql`
+- `type`: `mysql` or `postgresql`; use `postgresql` with `dialect: hologres` for Hologres.
 - `host`: database host
 - `port`: database port
 - `database`: optional default database/schema. Keep it empty for a multi-schema target; schema operations still require an explicit `-Database`.
@@ -39,7 +39,14 @@ These are conventions, not hard-coded skill requirements.
 - `user`: database user
 - `clientDefaultsFile`: optional absolute path to a private MySQL option file. When set, the script passes it as `--defaults-extra-file` and reads credentials from `[client]`; this is preferred for password-authenticated targets.
 - `password`: legacy optional field. It is used only when `clientDefaultsFile` is absent; migrate it to a private option file instead.
+- `allowedSchemas`: required non-empty list for PostgreSQL-compatible targets. It is the only schema authority for table discovery and queries.
+- `pgPassFile`: required absolute path for PostgreSQL-compatible targets. It points to a private libpq passfile, never a shared skill file.
+- `psqlPath`: optional absolute path to `psql.exe`; use it when the client is intentionally kept outside the system PATH.
+- `sslMode`: optional libpq SSL mode. Prefer `verify-full` with `sslRootCert` for remote Hologres targets.
+- `sslRootCert`: optional absolute CA certificate path used by `verify-ca` or `verify-full`.
 - `allowOperationalReadonlyGrants`: optional; keep `false` by default. When `true`, allows `LOCK TABLES`, `PROCESS`, and replication-related grants, but direct write and administrative grants remain prohibited.
+- `environment`: optional target classification. Set to `test` only for a test target.
+- `allowPrivilegedTestAccount`: optional; keep `false` by default. When `true`, skips the account-grant rejection only when `environment` is `test`; SQL remains read-only and callers must still pass the Hook policy.
 - `connectTimeoutSeconds`: optional connection timeout; defaults to 15 seconds.
 - `queryTimeoutSeconds`: optional server-side read-query timeout; defaults to 60 seconds.
 - `maxRows`: optional maximum rows for an ad-hoc query; defaults to 1000 and cannot exceed 10000.
@@ -52,16 +59,35 @@ These are conventions, not hard-coded skill requirements.
 {
   "targets": [
     {
-      "name": "example-readonly",
+      "name": "oversea-test",
       "type": "mysql",
       "host": "127.0.0.1",
       "port": 3306,
-      "database": "example_database",
+      "database": "sample_db",
       "user": "readonly_user",
       "clientDefaultsFile": "D:\\private\\mysql\\readonly.cnf",
-      "note": "Example read-only target"
+      "note": "OverSea test readonly target"
     }
   ]
+}
+```
+
+PostgreSQL/Hologres example:
+
+```json
+{
+  "name": "holo-prod-ro",
+  "type": "postgresql",
+  "dialect": "hologres",
+  "host": "<endpoint>",
+  "port": 80,
+  "database": "prod_ads",
+  "allowedDatabases": ["prod_ads"],
+  "allowedSchemas": ["common"],
+  "user": "<readonly-user>",
+  "psqlPath": "D:\\Tools\\pgsql\\bin\\psql.exe",
+  "pgPassFile": "D:\\private\\postgres\\hologres.pgpass",
+  "sslMode": "verify-full"
 }
 ```
 

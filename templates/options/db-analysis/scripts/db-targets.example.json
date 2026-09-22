@@ -14,6 +14,23 @@
       "queryTimeoutSeconds": 600,
       "maxRows": 1000,
       "note": "Replace locally with a dedicated read-only target. Never commit credentials."
+    },
+    {
+      "name": "example-postgresql-readonly",
+      "type": "postgresql",
+      "host": "postgres.example.internal",
+      "port": 5432,
+      "database": "app_prod",
+      "allowedDatabases": ["app_prod"],
+      "allowedSchemas": ["public"],
+      "user": "readonly_user",
+      "psqlPath": "",
+      "pgPassFile": "",
+      "sslMode": "require",
+      "connectTimeoutSeconds": 15,
+      "queryTimeoutSeconds": 600,
+      "maxRows": 1000,
+      "note": "Generic PostgreSQL/Hologres readonly target. Keep credentials only in a local pgpass file."
     }
   ]
 }

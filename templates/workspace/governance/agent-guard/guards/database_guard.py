@@ -11,7 +11,7 @@ from guard_utils import executable_tokens, is_executing_path, normalize
 
 def is_direct_db_client_invocation(command: str) -> bool:
     for token in executable_tokens(command):
-        if normalize(Path(token).name) in {"mysql", "mysql.exe", "mariadb", "mariadb.exe"}:
+        if normalize(Path(token).name) in {"mysql", "mysql.exe", "mariadb", "mariadb.exe", "psql", "psql.exe"}:
             return True
     return False
 
@@ -37,7 +37,7 @@ def check_sql(command: str, database: dict[str, Any]) -> str | None:
 def check_database_command(command: str, policy: dict[str, Any], cwd: str) -> str | None:
     database = policy.get("database", {}) if isinstance(policy.get("database"), dict) else {}
     if database.get("deny_direct_clients", True) and is_direct_db_client_invocation(command):
-        return "Direct mysql/mariadb invocation is blocked. Use the workspace db-analysis.cmd so read-only checks are enforced."
+        return "Direct database-client invocation is blocked. Use the workspace db-analysis.cmd so read-only checks are enforced."
     if is_database_invocation(command, policy, cwd):
         if database.get("deny_config_path_override", True) and re.search(r"(?i)(?<!\S)-configpath\b", command):
             return "Overriding the database target configuration is blocked."

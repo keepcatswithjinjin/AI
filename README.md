@@ -10,7 +10,7 @@
 - `templates/options/`：可选能力模板；初始化时显式选择是否安装数据库分析和云效能力。
 - `templates/workspace/.codex/` 与 `.claude/`：工作站本地 Hook 注册模板。
 - `templates/workspace/governance/agent-guard/`：Codex 与 Claude Code 共用的治理守卫。
-- `skills/db-analysis/`：不含凭据的 MySQL 只读分析 skill；可选安装。
+- `skills/db-analysis/`：不含凭据的 MySQL 与 PostgreSQL/Hologres 只读分析 skill；可选安装。
 - `skills/yunxiao-workstation/`：不含凭据的云效任务/需求管理 skill；可选安装，流水线结构保留但默认不启用自动化。
 - `install.ps1`：把模板渲染到指定的工作区根目录。
 - `USAGE.zh-CN.md`：安装、Hook 注册、本地数据库配置和维护说明。

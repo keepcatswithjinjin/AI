@@ -91,6 +91,24 @@ __WORKSPACE_ROOT__\scripts\publish-to-branch.cmd <原有参数> `
 
 它会提交当前 merge、推送目标分支，成功后恢复源分支。远端拒绝时停留在目标分支，不自动回滚或切回。
 
+#### 本地 Git Hook 的人工授权例外
+
+当 `VerifyConflict` 已为 `passed`，但 Agent 运行时仅因**本地 Git Hook**拦截完成命令，人工可手动从
+`__WORKSPACE_ROOT__\governance\agent-guard\local-git-hook-bypass-approval.example.json` 创建同目录的
+`local-git-hook-bypass-approval.json`，并执行：
+
+```powershell
+__WORKSPACE_ROOT__\scripts\publish-to-branch.cmd <原有参数> `
+  -Mode CompleteConflict `
+  -ConfirmConflictCompletion `
+  -UseHumanCompletionApproval
+```
+
+该批准文件只能由人维护，Agent 即使处于维护窗口也不能创建、修改或删除。脚本只在本次 `CompleteConflict` 的
+`git commit` 与 `git push` 中使用受保护的空本地 hooks 目录；远端 CI、远端分支保护、冻结输入、冲突核验、
+编译要求和源分支恢复仍完整执行，并会在 `report.md` 留下使用证据。完成后由人手工删除批准文件。不得以
+`--no-verify`、`core.hooksPath` 或 `GIT_CONFIG_*` 方式直接绕过。
+
 ## 结论
 
 | 状态 | 含义 | 允许完成 |

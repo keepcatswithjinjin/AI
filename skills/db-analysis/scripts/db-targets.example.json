@@ -8,8 +8,26 @@
       "database": "",
       "allowedDatabases": ["demo_db"],
       "user": "readonly_user",
-      "clientDefaultsFile": "",
+      "password": "",
       "note": "Example only. Keep real credentials in a local config outside the skill."
+    },
+    {
+      "name": "hologres-prod-ro",
+      "type": "postgresql",
+      "dialect": "hologres",
+      "host": "<hologres-endpoint>",
+      "port": 80,
+      "database": "prod_ads",
+      "allowedDatabases": ["prod_ads"],
+      "allowedSchemas": ["common"],
+      "user": "<readonly-user>",
+      "psqlPath": "D:\\Tools\\pgsql\\bin\\psql.exe",
+      "pgPassFile": "D:\\private\\postgres\\hologres.pgpass",
+      "sslMode": "verify-full",
+      "sslRootCert": "D:\\private\\postgres\\hologres-ca.pem",
+      "queryTimeoutSeconds": 600,
+      "maxRows": 1000,
+      "note": "Example only. Hologres production readonly target."
     }
   ]
 }

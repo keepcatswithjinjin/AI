@@ -86,9 +86,18 @@
 .\scripts\db-analysis.cmd -Target sample-local -Action query -Sql "SELECT COUNT(*) FROM order_subscribe"
 ```
 
+PostgreSQL / Hologres targets require an explicit database and schema:
+
+```powershell
+.\scripts\db-analysis.cmd -Target example-postgresql-readonly -Action databases
+.\scripts\db-analysis.cmd -Target example-postgresql-readonly -Database app_prod -Action schemas
+.\scripts\db-analysis.cmd -Target example-postgresql-readonly -Database app_prod -Schema public -Action tables
+.\scripts\db-analysis.cmd -Target example-postgresql-readonly -Database app_prod -Schema public -Action query -Sql "SELECT COUNT(*) FROM public.orders"
+```
+
 约束：
 
-- 当前脚本只支持 `mysql.exe`。
+- 支持本机 `mysql.exe` 及 `psql.exe`；目标以 `type: mysql` 或 `type: postgresql` 区分。Hologres 使用 PostgreSQL 协议。
 - 工作区入口默认读取 `__WORKSPACE_ROOT__\scripts\db-targets.json`，也可显式传 `-ConfigPath`。
 - 实际查询逻辑来自全局 Codex skill：`%USERPROFILE%\.codex\skills\db-analysis\scripts\db-analysis.ps1`。
 - 默认适用于本机已安装 MySQL 客户端、已开白或本地可直连的库。
@@ -96,6 +105,7 @@
 - 若现有本地 `db-targets.json` 仍使用 `password`，可执行 `./scripts/migrate-db-client-credentials.ps1 -Preview` 查看迁移预案，确认后去掉 `-Preview`。
 - 这是查询和分析工具，不负责 DDL 变更或批量写操作；生产读端默认连接超时 15 秒、查询超时 10 分钟、最多返回 1000 行；允许 `SELECT *`，但仍拒绝敏感字段、行锁和诊断表查询。每个目标必须在本地 `allowedDatabases` 中显式列出可查询 schema；`-Action databases` 仅显示该白名单，`tables`、`columns`、`create`、`query` 都必须传入一个已批准的 `-Database`。仅显式标记为 `environment: test` 的目标可使用高权限账号，且仍只允许读取 action 与只读 SQL。
 - 每次连接目标都会先检查 `SHOW GRANTS FOR CURRENT_USER()`，发现写权限或管理权限会拒绝继续。
+- PostgreSQL / Hologres 使用 `pgPassFile` 保存本机凭证，并在连接前检查超级用户、数据库/Schema 创建以及表 DML 能力；Holo 查询必须配置 `allowedDatabases`、`allowedSchemas` 并显式使用 `schema.table`。`create` 动作默认不对 Holo 开放。
 
 ### 3.4 删除 worktree
 
@@ -138,6 +148,9 @@
 
 # B 类冲突：填写 artifact 中生成的 manual-acceptance.md 后继续
 .\scripts\publish-to-branch.cmd <原有参数> -Mode VerifyConflict -ManualAcceptanceFile <已填写文件路径>
+
+# 仅当本地 Git Hook 误拦截已通过核验的 CompleteConflict：人工创建批准文件后才可使用
+.\scripts\publish-to-branch.cmd <原有参数> -Mode CompleteConflict -ConfirmConflictCompletion -UseHumanCompletionApproval
 ```
 
 - `TargetBranch` 由调用方指定；脚本不固定测试分支名，也不自动创建远端目标分支。
@@ -149,6 +162,7 @@
 - 冲突时，脚本冻结 Git stage 1/base、stage 2/ours、stage 3/theirs 与冲突态原文到 `artifacts/merge-verification/`；解决后必须 `VerifyConflict`，通过后才可显式 `CompleteConflict`。
 - A 类纯新增冲突执行四项行多重集对账；B 类必须有人工决策记录；Java/POM 冲突必须通过 `mvn -pl ... -am compile`。
 - 分支占用、远端拒绝、目标不存在或任一 Git 失败均停止并要求人工决定；不强制处理、不自动回滚。
+- `-UseHumanCompletionApproval` 是极窄的人工授权例外：仅 `CompleteConflict` 可用，且必须由人手工创建 `governance\agent-guard\local-git-hook-bypass-approval.json`（内容严格为示例中的 `enabled` 与 `scope`）。它只让受保护脚本在本次 merge 的 `commit`、`push` 使用受保护的空本地 hooks 目录；远端 CI、分支保护、冲突核验、编译证据和恢复源分支均不会跳过。使用记录会追加到核验报告；操作后由人手工删除批准文件。禁止手写 `--no-verify`、`core.hooksPath` 或环境变量绕过。
 - 详细规则见 `rules/merge-verification.md`；不使用测试分支作为正确性基线，也不替代上线前 Review。
 
 

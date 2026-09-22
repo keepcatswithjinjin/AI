@@ -17,13 +17,18 @@ param(
     [string]$MavenSettings,
     [string]$ManualAcceptanceFile,
     [switch]$ConfirmConflictCompletion,
+    [switch]$UseHumanCompletionApproval,
     [switch]$Preview
 )
 
 $ErrorActionPreference = 'Stop'
 $script:LastGitExitCode = 0
 $script:resolvedProjectPath = $null
+$script:approvedLocalGitHookBypass = $false
 $artifactRoot = Join-Path (Split-Path -Parent $PSScriptRoot) 'artifacts\\merge-verification'
+$workspaceRoot = Split-Path -Parent $PSScriptRoot
+$localGitHookBypassApprovalPath = Join-Path $workspaceRoot 'governance\\agent-guard\\local-git-hook-bypass-approval.json'
+$localGitHookBypassHooksPath = Join-Path $workspaceRoot 'governance\\agent-guard\\empty-git-hooks'
 
 function Normalize-PathString {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -40,7 +45,11 @@ function Invoke-Git {
     if ($hasNativePreference) { $oldNativePreference = $PSNativeCommandUseErrorActionPreference; $PSNativeCommandUseErrorActionPreference = $false }
     try {
         $ErrorActionPreference = 'Continue'
-        $rawOutput = & git -c safe.directory=* -C $script:resolvedProjectPath @Arguments 2>&1
+        $gitConfig = @('-c', 'safe.directory=*')
+        if ($script:approvedLocalGitHookBypass -and $Arguments.Count -gt 0 -and $Arguments[0] -in @('commit', 'push')) {
+            $gitConfig += @('-c', "core.hooksPath=$localGitHookBypassHooksPath")
+        }
+        $rawOutput = & git @gitConfig -C $script:resolvedProjectPath @Arguments 2>&1
         $exitCode = $LASTEXITCODE
     }
     finally {
@@ -53,6 +62,21 @@ function Invoke-Git {
         throw "git $($Arguments -join ' ') failed.$([Environment]::NewLine)$(($output | Out-String).Trim())"
     }
     @($output)
+}
+
+function Test-ApprovedLocalGitHookBypass {
+    if (-not $UseHumanCompletionApproval) { return $false }
+    if ($Mode -ne 'CompleteConflict') { throw '-UseHumanCompletionApproval is allowed only with -Mode CompleteConflict.' }
+    if (-not (Test-Path -LiteralPath $localGitHookBypassApprovalPath)) { throw "Local Git hook bypass requires a human-created approval file: $localGitHookBypassApprovalPath" }
+    try { $approval = Get-Content -LiteralPath $localGitHookBypassApprovalPath -Raw | ConvertFrom-Json }
+    catch { throw "Local Git hook bypass approval is not valid JSON: $localGitHookBypassApprovalPath" }
+    $properties = @($approval.PSObject.Properties.Name | Sort-Object)
+    $expected = @('enabled', 'scope')
+    if ($properties.Count -ne $expected.Count -or @($properties | Where-Object { $_ -notin $expected }).Count -gt 0 -or $approval.enabled -ne $true -or $approval.scope -ne 'publish-to-branch.complete-conflict') {
+        throw "Local Git hook bypass approval must contain exactly enabled=true and scope=publish-to-branch.complete-conflict: $localGitHookBypassApprovalPath"
+    }
+    if (-not (Test-Path -LiteralPath $localGitHookBypassHooksPath)) { throw "Approved empty Git hooks directory is missing: $localGitHookBypassHooksPath" }
+    return $true
 }
 
 function Get-CurrentBranch {
@@ -445,9 +469,18 @@ function Complete-VerifiedConflict {
     if ($state.verification.status -ne 'passed') { throw "Merge verification status is '$($state.verification.status)'; completion is blocked." }
     if (@(Get-ConflictFiles).Count) { throw 'Unresolved conflict entries remain.' }
     Invoke-Git @('diff', '--check') | Out-Null
-    Invoke-Git @('commit', '--no-edit') | Out-Null
-    try { Invoke-Git @('push', 'origin', $state.targetBranch) | Out-Null }
+    $script:approvedLocalGitHookBypass = Test-ApprovedLocalGitHookBypass
+    if ($script:approvedLocalGitHookBypass) {
+        Add-Content -LiteralPath $state.verification.reportPath -Value "`n## Local Git hook bypass`n- Human approval: $localGitHookBypassApprovalPath`n- Scope: commit and push in CompleteConflict only`n- Remote CI and script verification: not bypassed" -Encoding utf8
+        $state.localGitHookBypass = [pscustomobject]@{ approved = $true; approvalPath = $localGitHookBypassApprovalPath; scope = 'publish-to-branch.complete-conflict'; usedAt = (Get-Date).ToString('o') }
+        Save-MergeState $state
+    }
+    try {
+        Invoke-Git @('commit', '--no-edit') | Out-Null
+        Invoke-Git @('push', 'origin', $state.targetBranch) | Out-Null
+    }
     catch { throw "Merged locally but target push failed. Stay on '$($state.targetBranch)' and request human direction.$([Environment]::NewLine)$($_.Exception.Message)" }
+    finally { $script:approvedLocalGitHookBypass = $false }
     $targetCommit = ((Invoke-Git @('rev-parse', 'HEAD')) -join '').Trim()
     Invoke-Git @('switch', $state.sourceBranch) | Out-Null
     Remove-Item -LiteralPath (Get-ActiveMergePointerPath) -Force -ErrorAction SilentlyContinue
@@ -462,6 +495,7 @@ $script:resolvedProjectPath = Normalize-PathString $ProjectPath
 if (-not (Test-Path -LiteralPath $script:resolvedProjectPath)) { throw "Project path not found: $script:resolvedProjectPath" }
 $inside = ((Invoke-Git @('rev-parse', '--is-inside-work-tree')) -join '').Trim()
 if ($inside -ne 'true') { throw "Project path is not a Git worktree: $script:resolvedProjectPath" }
+if ($UseHumanCompletionApproval -and $Mode -ne 'CompleteConflict') { throw '-UseHumanCompletionApproval is allowed only with -Mode CompleteConflict.' }
 Invoke-Git @('check-ref-format', '--branch', $TargetBranch) -AllowFailure | Out-Null
 if ($script:LastGitExitCode -ne 0) { throw "Invalid target branch name: $TargetBranch" }
 
