@@ -121,18 +121,8 @@ startup_timeout_sec = 120
 
 重启或新开从工作站根目录进入的 Agent 后，以安全查询、非法目标、危险 Git、缺少 `-OutputFormat Json` 的 worktree 脚本和受保护文件修改分别验证允许与拒绝行为。
 
-## 6. Serena / Java 配置边界
+## 6. 维护与升级
 
-Serena 是可选能力，适合复杂需求中大量查询函数、类、引用和调用关系。模板不会写死作者机器上的 Serena、JDK、JRE 或 JDTLS 路径。
-
-启用方式：使用安装后工作区的 `.\scripts\new-worktree.cmd -ProjectKey project-api -Name my-feature -Serena Enable`。
-
-`new-worktree.ps1` 会按顺序寻找 Serena 可执行文件：命令参数 `-SerenaExe <path>`、环境变量 `SERENA_EXE`、PATH 中的 `serena`。
-
-如果 Serena 的 Java LSP 需要 JDK/JRE/JDTLS，请使用者在自己的 Serena 用户级配置或项目文档中配置，例如 `%USERPROFILE%\.serena\serena_config.yml`。不同项目需要不同 Java 版本时，以项目实际要求为准；不要复用模板作者的本机路径。
-
-## 7. 维护与升级
-
-框架变更在本仓库中提交；已有工作区不会自动更新。升级前先比较模板与工作区的治理、脚本和规则，再有选择地合并。不要用模板覆盖本地数据库配置、云效 token、云效个人组织/项目目录、Serena 用户级配置、brief/worktree 分支索引或项目注册表。
+框架变更在本仓库中提交；已有工作区不会自动更新。升级前先比较模板与工作区的治理、脚本和规则，再有选择地合并。不要用模板覆盖本地数据库配置、云效 token、云效个人组织/项目目录、brief/worktree 分支索引或项目注册表。
 
 受保护的治理文件默认不能由 Agent 修改。需要维护时，由人工在安装后的 `governance\agent-guard\` 中，从 `maintenance-approval.example.json` 创建 `maintenance-approval.json` 并将其内容设为 `{ "enabled": true }`；完成后手动删除该文件或改回 `false`。该文件本身始终受保护，Agent 无法自行开启维护窗口。

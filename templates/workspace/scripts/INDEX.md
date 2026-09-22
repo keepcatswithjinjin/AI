@@ -69,7 +69,6 @@
 - worktree 路径固定为 `__WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>`。
 - 分支名固定为 `feature/<需求名>` 或 `hotfix/<需求名>`。
 - `-Name` 必须是 kebab-case。
-- `.mcp.json` 使用该 worktree 的绝对路径，并由 Git 本地排除规则忽略，不会作为业务分支变更；若仓库已跟踪该文件，脚本会停止，避免覆盖团队配置。
 
 ### 3.3 数据库分析（可选）
 
