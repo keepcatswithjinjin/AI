@@ -7,7 +7,7 @@
 - 目标：防止人工或 Agent 解决冲突时漏掉、重复或夹带代码，并在 Java/POM 冲突时要求编译证据。
 - 不使用测试分支作为正确性依据；测试分支可能包含混合需求。
 - 不审查功能需求本身、历史问题或整个 diff；这些属于 `review-role-guide.md`、`review-standard.md`。
-- 产物保存在 `__WORKSPACE_ROOT__\artifacts\merge-verification\<仓库名-哈希>\`，不写入 Git 工作区，不改变待提交文件范围。
+- 新产物保存在 `__WORKSPACE_ROOT__\briefs\<类型>\<需求名>\runtime\merge-verification\<仓库名-哈希>\<本次核验>\`，不写入 Git 工作区，不改变待提交文件范围。脚本先按原 WORKTREE-INDEX 映射或唯一匹配的 worktree 需求名定位；无法定位时先申请建立最小需求容器，再显式传 `-BriefPath <需求根目录>`，不自动创建或登记需求。历史 artifacts 核验指针保留兼容，不自动迁移。
 
 ## 固定流程
 
@@ -41,7 +41,7 @@ __WORKSPACE_ROOT__\scripts\publish-to-branch.cmd `
 
 #### A 类：可机械证明的纯新增冲突
 
-仅当共同 base 的每一行都仍被 ours 和 theirs 保留时，才判为 A；其余一律按 B，宁可人工核验也不误放行。
+仅当共同 base 的每一行都仍被 ours 和 theirs 保留，且双方新增行的多重集没有重叠时，才判为 A；其余一律按 B，宁可人工核验也不误放行。双方新增同一行（例如相同 Java import）可能应在合并结果中只保留一份，不能被 A 类对账强迫复制为两份。
 
 对 A 类，脚本用行的**多重集**完成四项对账：
 
@@ -54,9 +54,9 @@ __WORKSPACE_ROOT__\scripts\publish-to-branch.cmd `
 
 #### B 类：共享 base 被改写的冲突
 
-脚本生成 `manual-acceptance.md` 模板。人工必须按每个 B 文件说明：目标侧行为、源侧行为、最终取舍、受影响调用方和定向验证。
+脚本生成 `manual-acceptance.md` 模板，可按每个 B 文件记录：目标侧行为、源侧行为、最终取舍、受影响调用方和定向验证。它用于保留复杂冲突的人类决策，不替代 Git 冲突解决、编译或测试证据。
 
-填写完成后重新验证：
+需要保留该记录时，填写完成后重新验证：
 
 ```powershell
 __WORKSPACE_ROOT__\scripts\publish-to-branch.cmd <原有参数> `
@@ -64,7 +64,7 @@ __WORKSPACE_ROOT__\scripts\publish-to-branch.cmd <原有参数> `
   -ManualAcceptanceFile <artifact 下已填写的 manual-acceptance.md>
 ```
 
-占位项未填写、缺少文件决策或没有显式传入该文件时，验证不会通过。
+未提供该文件不阻断验证；显式提供时必须完整填写，避免保存半成品记录。
 
 #### Java / POM 冲突
 
@@ -93,9 +93,7 @@ __WORKSPACE_ROOT__\scripts\publish-to-branch.cmd <原有参数> `
 
 #### 本地 Git Hook 的人工授权例外
 
-当 `VerifyConflict` 已为 `passed`，但 Agent 运行时仅因**本地 Git Hook**拦截完成命令，人工可手动从
-`__WORKSPACE_ROOT__\governance\agent-guard\local-git-hook-bypass-approval.example.json` 创建同目录的
-`local-git-hook-bypass-approval.json`，并执行：
+当 `VerifyConflict` 已为 `passed`，但 Agent 运行时仅因**本地 Git Hook**拦截完成命令，Agent 必须先向用户说明即将跳过的仅是本地 Git Hook，并获得本次完成操作的明确授权。获得授权后执行：
 
 ```powershell
 __WORKSPACE_ROOT__\scripts\publish-to-branch.cmd <原有参数> `
@@ -104,17 +102,13 @@ __WORKSPACE_ROOT__\scripts\publish-to-branch.cmd <原有参数> `
   -UseHumanCompletionApproval
 ```
 
-该批准文件只能由人维护，Agent 即使处于维护窗口也不能创建、修改或删除。脚本只在本次 `CompleteConflict` 的
-`git commit` 与 `git push` 中使用受保护的空本地 hooks 目录；远端 CI、远端分支保护、冻结输入、冲突核验、
-编译要求和源分支恢复仍完整执行，并会在 `report.md` 留下使用证据。完成后由人手工删除批准文件。不得以
-`--no-verify`、`core.hooksPath` 或 `GIT_CONFIG_*` 方式直接绕过。
+通用模板保留人工批准文件机制：由人手工创建 `governance/agent-guard/local-git-hook-bypass-approval.json`，内容严格为 `{ "enabled": true, "scope": "publish-to-branch.complete-conflict" }`。Agent 不得自行创建、修改或删除批准文件。脚本仅在本次完成阶段的 commit/push 使用空 hooks 目录，操作后由人关闭批准；其余核验与远端防护不变。
 
 ## 结论
 
 | 状态 | 含义 | 允许完成 |
 |------|------|----------|
-| `passed` | A 类四项对账通过；B 类有完整人工记录；所需编译通过 | 是 |
-| `manual-acceptance-required` | 存在 B 类，但没有完整人工决策记录 | 否 |
+| `passed` | A 类四项对账通过；B 类已解决；所需编译通过 | 是 |
 | `compile-required` | Java/POM 冲突尚未给出编译模块 | 否 |
 | `failed` | A 类对账、编译、残留标记或基础检查失败 | 否 |
 

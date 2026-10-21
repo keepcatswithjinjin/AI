@@ -8,8 +8,8 @@
 
 | Key | 仓库路径 | 定位 | Worktree 父目录 |
 |-----|---------|------|----------------|
-| `project-api` | `__WORKSPACE_ROOT__\project-api` | 示例后端项目 | `__WORKSPACE_ROOT__\worktrees\project-api-worktree` |
-| `project-web` | `__WORKSPACE_ROOT__\project-web` | 示例前端项目 | `__WORKSPACE_ROOT__\worktrees\project-web-worktree` |
+| `project-api` | `__WORKSPACE_ROOT__\projects\project-api` | 示例后端项目，使用前替换 | `__WORKSPACE_ROOT__\worktrees\project-api-worktree` |
+| `project-web` | `__WORKSPACE_ROOT__\projects\project-web` | 示例前端项目，使用前替换 | `__WORKSPACE_ROOT__\worktrees\project-web-worktree` |
 
 ---
 
@@ -17,8 +17,9 @@
 
 ```text
 __WORKSPACE_ROOT__\
-├── project-api/                      ← 根项目（主仓库）
-├── project-web/
+├── projects/                        ← 独立主项目容器
+│   ├── project-api/
+│   └── project-web/
 ├── worktrees/                         ← 新 worktree 统一根目录
 │   ├── project-api-worktree/
 │   │   └── example-feature/
@@ -32,6 +33,7 @@ __WORKSPACE_ROOT__\
 ## 根项目 master 边界
 
 - 根项目的 `master` 只用于基线同步、只读代码理解，以及用户明确要求的本次业务需求和其直接连带文档。
+- 通用模板不会丢弃根项目改动或硬重置 master：默认基线更新要求根项目干净，且只允许快进；失败时停止，由用户决定。Col 个人工作站的可再生根仓库策略不向通用模板传播。
 - Agent 不得在根项目 `master` 新增、修改或迁移治理规则、Hook / Agent 配置、工作站脚本、项目导航、知识库或其他与本次业务无关的文档。
 - 需要维护工作站、治理或通用 Agent 能力时，只能在工作站目录维护；需要修改业务代码时，必须在该需求对应的 worktree 分支中执行。
 - 如果用户明确要求在 `master` 修改非业务内容，先说明该动作突破本边界，并等待用户再次确认；不得将“便于当前 Agent 使用”视为业务连带理由。
@@ -85,7 +87,7 @@ feature 还是 hotfix？
 
 Agent 不得用手写底层 Git 创建命令代替该脚本，也不得因目标目录写入受限而改建到项目内 `.codex-worktrees/` 或其他路径。脚本失败时保留现场，报告失败命令、环境限制和已产生的状态；取得正确路径的执行权限或由用户明确修改工作站规则后再继续。
 
-先以 `-Preview` 获取预案，经确认后再执行。真正创建时若远端访问或写入被沙箱限制，应申请所需权限，不能用其他目录或原生 Git 命令绕过。
+Agent 调用必须使用 `-OutputFormat Json`。先以 `-Preview` 获取预案，经确认后再执行；失败不得绕过。已登记的复杂需求同时传 `-RequirementKey <type:name>` 与 `-Role backend|frontend`，脚本同步代码位置索引；`partial` 表示尚未完整收尾。
 
 预览示例：
 
@@ -107,7 +109,7 @@ __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-fea
 
 1. **Worktree 必须放在 `__WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>/` 目录下**
 2. **Worktree 父目录首次使用时自动创建**（`mkdir -p`）
-3. **分支命名**：`feature/<需求名>` 或 `hotfix/<需求名>`
+3. **分支命名**：`feature/<需求名>` 或 `hotfix/<需求名>`；单次授权跳过 worktree 时仍适用，用户明确指定完整分支名时按其指定执行
 4. **基于分支**：默认基于最新 `master`；有特殊需求时允许用户指定已存在分支
 5. **已有旧 worktree 不迁移**
 6. **同步代码位置索引**：创建完成后必须更新 `briefs/WORKTREE-INDEX.md`，记录 brief、代码位置和分支
@@ -127,9 +129,9 @@ __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-fea
 用户指定删除某个 worktree 时，执行以下步骤：
 
 1. **读取脚本索引**：先读取 `__WORKSPACE_ROOT__\scripts\INDEX.md`
-2. **预览删除计划**：执行 `__WORKSPACE_ROOT__\scripts\remove-worktree.cmd -WorktreePath <worktree路径> -Preview`
+2. **预览删除计划**：执行 `__WORKSPACE_ROOT__\scripts\remove-worktree.cmd -WorktreePath <worktree路径> -Preview -OutputFormat Json`
 3. **用户确认**：向用户展示预览结果，确认是否删除 worktree
-4. **执行删除**：确认后执行 `__WORKSPACE_ROOT__\scripts\remove-worktree.cmd -WorktreePath <worktree路径>`
+4. **执行删除**：确认后执行 `__WORKSPACE_ROOT__\scripts\remove-worktree.cmd -WorktreePath <worktree路径> -Confirm -OutputFormat Json`；登记过的需求同时传精确的 RequirementKey 与 Role
 5. **Dirty 场景**：若脚本提示存在未提交或未跟踪变更，必须先让用户确认；只有用户明确接受删除这些变更时，才可追加 `-Force`
 6. **半删除状态**：若 worktree 已不是完整 Git worktree，但仍位于安全边界内，允许脚本在 `-Force` 下进入残留清理模式
 
@@ -142,6 +144,8 @@ __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-fea
 - ❌ **禁止**删除 `<Project>/` 根项目目录
 - ❌ **禁止**执行 `git branch -D` 删除分支
 - ❌ **禁止**维护或依赖 Agent 会话恢复状态推断代码位置
+
+清理 worktree 不等于已部署。只有用户明确确认上线后，才按生命周期调用 Released；不由删除脚本自动推断。
 
 ---
 

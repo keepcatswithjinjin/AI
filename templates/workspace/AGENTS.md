@@ -1,182 +1,47 @@
-# 多项目工作区 - 设计工作站
+# 工作站 Agent 入口
 
-> 本目录下的 AI Agent session **仅用于方案设计，不执行代码**。
-> 执行阶段请切换到各自项目目录开启新 session。
+公共入口只在本文件维护；CLAUDE.md 导入本文件。下列路径相对 `__WORKSPACE_ROOT__`，仅在任务命中时读取，不递归加载全部链接。
 
----
+## 职责与接入
 
-## 一、角色定位
+- 在 工作站 根目录发起新需求时，默认负责查询、设计与契约；按流程产出适用 briefs、确认并创建 worktree 后停止实施。用户明确要求本对话继续时，才在目标 worktree 实施，不因改动小而自行转入开发。
+- 从项目/worktree 接手时，按当前请求确定职责，不因继承本入口而重新走设计流程：只要求阅读就只读，要求实现则先读需求 README → [执行入口](rules/execution-entry.md)，Review 则读 [Review 角色](rules/review-role-guide.md)。
+- 用户指定需求路径时直接使用；未指定时，用 worktree 名与 [需求索引](briefs/INDEX.md)、[代码位置索引](briefs/WORKTREE-INDEX.md)精确核对类型和名称，不模糊匹配。旧 README 缺少路由时直接读执行入口；项目 `tasks/` 不是 brief 入口。
+- 单次授权只豁免明确指定的环节，执行前简述范围，不重复索取已有授权；分支命名、项目规则、验证及提交发布权限仍适用，见 [生命周期](rules/task-lifecycle.md)第一节。
 
-进入本目录启动的 session，职责是：
-1. **理解需求**：与我对齐业务目标，识别 XY 问题
-2. **产出方案**：产出技术设计方案
-3. **定义契约**：产出前后端共享的、自包含的接口契约
+## 必须保留的边界
 
-**不执行**：不编写业务代码、不运行构建命令、不提交 Git。
+- 工作区根目录默认不初始化 Git；用户明确启用本地版本控制时，仅纳管规则、工具和通用说明，不配置远端。业务仓库、briefs、知识内容、产物和本机配置不得混入工作站提交；业务 Git 在登记项目/worktree 内操作。
+- 主项目在 `projects/`，worktree 在 `worktrees/`，注册表只维护于 [worktree 规则](rules/worktree.md)。根项目 master 仅作基线、只读理解及明确授权的本次业务/直接连带文档，不维护治理、Agent 配置、工作站能力或导航。
+- 新建文件/目录先查 [结构地图](STRUCTURE.md)第六节；新目录须授权，已有目录不扩大用途。临时材料进 `tmp/`，需求执行材料按归属进 runtime；不在根目录随手写文件，不自行生成备份或快照。
+- worktree 创建/删除、分支发布、数据库操作先读对应规则并走受控入口；预览和确认按对应规则执行，失败不得用底层命令或其他目录绕过。Agent 创建/删除调用使用 JSON 结果，完成后核验代码位置索引同步。
+- 以最新适用 spec、项目规则和源码为准，不用会话记忆或交接覆盖实时事实。执行中确认的方案变化按生命周期回写；阶段完成、暂停、阻塞或切换 Agent/客户端前，按 [交接规则](rules/handoff.md)自动维护交接，无需询问。
+- 公共角色、风格和工具细则留在 工作站；项目入口只路由并维护项目事实，不复制公共规则。不得自行修改受保护配置，不预读或输出密钥；读取说明不等于工具、Hook 或权限已启用。
+- 首版人工代码导航图仅在用户明确要求时生成；开发完成、检查报告、提交或上线前 Review 不构成生成授权，不预建 `runtime/code-review/` 或更新历史图。
 
-> **例外**：小型、低风险的代码修改（如单文件条件调整、枚举值新增）可在此 session 直接执行。执行后必须遵守 [执行交接规范](rules/handoff.md)。
+## 按需路由
 
-### 根目录 Git 边界
+命中意图后，先读对应入口再操作；参数与细则以目标文件为准。
 
-- `__WORKSPACE_ROOT__` 是工作区容器，不是 Git 仓库；禁止在根目录初始化、恢复或操作 `.git`。
-- Git 命令只能在 `rules/worktree.md` 登记的项目根目录或其 worktree 内执行。
-- 已登记根项目的 `master` 只允许基线同步、只读理解，以及用户明确要求的本次业务和直接连带文档；不得在其中维护治理、Hook / Agent 配置、工作站能力、项目导航或其他非业务内容。详细边界见 `rules/worktree.md`。
+| 当前任务 | 入口 |
+| --- | --- |
+| 新需求、设计、方案变更或阶段同步 | [生命周期](rules/task-lifecycle.md)、[设计规则](rules/design.md) |
+| 生成/维护需求 README | [README 模板](rules/brief-readme-template.md) |
+| 接手代码实施、加载角色/风格或发现执行能力 | [执行入口](rules/execution-entry.md) |
+| 上线前 Review / 指定审查职责 | [Review 角色](rules/review-role-guide.md) → 标准与报告；默认只读，只审本次 diff 及直接调用链 |
+| Git 看板、worktree 管理、发布到指定分支 | [脚本索引](scripts/INDEX.md)对应段；创建/删除再读 [worktree 规则](rules/worktree.md)，冲突再读 [核验规则](rules/merge-verification.md) |
+| 数据库与测试 Redis（可选） | [脚本索引](scripts/INDEX.md)数据库段；安装后读取 `skills/db-analysis/SKILL.md`，以工具包现有只读边界为准 |
+| 云效任务、迭代、流水线（可选） | 安装后读取 `.codex/skills/yunxiao-workstation/SKILL.md`；未安装则报告未启用，不自行注册工具 |
+| 业务排查、配置或接口验证资料 | [业务资料入口](knowledge/README.md)，只读相关专题 |
+| 后端构建/测试 | [验证规范](rules/verification.md) |
+| 测试说明 / 改动检查报告 / 明确要求的人工导航图 | [测试说明](rules/tester-note.md) / [检查报告](rules/change-report.md) / [首版导航](rules/first-pass-code-review.md) |
+| 结构、规则维护或治理问题 | [结构地图](STRUCTURE.md)、[规则索引](rules/INDEX.md)；治理问题再读 [治理说明](governance/agent-guard/README.md) |
+| 记录待改进计划 / 引入新项目 | [计划入口](plans/README.md)（记录不等于实施授权） / [项目接入指南](vibe-coding-新项目初始化指南.md) |
 
----
+## 检索与沟通
 
-## 二、通用思维范式
-
-### 2.1 第一性原理
-
-拒绝经验主义和路径盲从。不要假设我完全清楚目标：
-- 若需求动机模糊，**停下讨论**，先澄清业务目标
-- 若当前路径非最优，**直接建议**更短、更低成本的替代方案
-
-### 2.2 输出结构（强制）
-
-所有回答必须分为两个部分：
-
-- **[直接执行]**：按当前要求和逻辑，直接给出任务结果
-- **[深度交互]**：基于底层逻辑对我的原始需求进行"审慎挑战"，包括：
-  - 质疑动机是否偏离目标（XY 问题识别）
-  - 分析当前路径的弊端
-  - 给出更优雅的替代方案
-
-### 2.3 停止条件
-
-遇到以下情况时，必须停止执行，先讨论：
-- 需求背景或业务目标不清晰
-- 存在多个可行的技术路径，且优劣不明显
-- 方案可能影响到未在需求中提及的已有模块
-- 接口设计可能破坏已有契约
-
----
-
-## 三、操作路由
-
-> **首版代码 Review 流程图禁令**：除非用户在当前对话明确要求“生成首版代码 Review 导航图”“生成未提交 diff 调用链图”或同等意图，否则禁止生成、更新或预创建 `artifacts\code-review\` 下的任何目录、`code-flow.md` 或图文件。开发完成、存在 diff、准备提交、用户要求检查报告或上线前 Review，均不构成默认生成授权。
-
-| 场景 | 读取文件 | 说明 |
-|------|---------|------|
-| 检查整体结构 | `STRUCTURE.md` | 了解全局目录、唯一真相源和更新检查规则 |
-| 检查脚本目录 | `scripts/INDEX.md` | 了解当前脚本、状态文件和执行入口 |
-| 提交并合入指定测试/集成分支 / 合并冲突核验 | `scripts/INDEX.md`、`rules/merge-verification.md` | 使用受控脚本发布；冲突后冻结输入、核验再完成 |
-| 检查规则维护点 | `rules/INDEX.md` | 判断规则变更需要同步哪些文档 |
-| 查看跨 Agent 治理 | `governance/agent-guard/README.md` | Codex / Claude 工作站本地 Hook、防护路径和 SQL 策略；受保护文件仅允许人工修改 |
-| 查看 Git/worktree 状态 | `scripts/git-dashboard.cmd` | 自动扫描注册项目、worktree 分支、测试分支占用 |
-| 查询数据库结构 | `scripts/INDEX.md` | 可选能力；安装了 db-analysis 后，根据本地数据库目标配置执行只读分析 |
-| 查询或维护云效任务/需求/流水线 | `.codex/skills/yunxiao-workstation/SKILL.md` | 可选能力；安装了 Yunxiao 后，使用工作站本地 `yunxiao` MCP |
-| 查看需求代码位置 | `briefs/WORKTREE-INDEX.md` | 查看 brief 对应的前端/后端代码位置和分支 |
-| 设计方案 / 执行中对齐 briefs | `rules/design.md`、`rules/task-lifecycle.md` | 用户只审核 design；执行 Agent 按最新决定同步设计、契约和计划 |
-| 生成给测试同事的测试说明 | `rules/tester-note.md` | 简洁说明原本现状、本次修改、测试入口、重点验证和回归范围 |
-| 生成面向开发者的检查报告 | `rules/change-report.md` | 说明改动范围、改动后的变化、未改变的旧逻辑和证明依据 |
-| 生成首版人工代码 Review 导航图 | `rules/first-pass-code-review.md` | 仅用户明确触发；基于未提交 diff 生成 IDE 导航与流程图，不进入上线前 Review |
-| 上线前代码 Review / 指定 Review 职责 | `rules/review-role-guide.md`、`rules/review-standard.md`、`rules/review-report.md` | 只按本次 diff 审查新增问题，分离输出后端/前端 Review |
-| 开始新需求 | `rules/task-lifecycle.md` | 判断简单/复杂需求；简单需求提示是否创建最小 brief 作为 Review 锚点 |
-| 管理 worktree | `rules/worktree.md` | 注册表、创建/删除交互流程 |
-| 执行交接 | `rules/handoff.md` | 交接文档模板与约束 |
-
-> AI 检测到对应意图时，**必须先读取**路由指向的文件，再执行。
-
-创建 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并使用 `scripts/new-worktree.cmd -ProjectKey <key> -Name <需求名> -Preview` 输出创建预案；确认后再执行创建命令。脚本或目标目录权限失败时停止并报告，不手写 `git worktree add` 或改用其他目录。
-
-删除 worktree 时，除读取 `rules/worktree.md` 外，还必须读取 `scripts/INDEX.md` 并优先使用 `scripts/remove-worktree.cmd -WorktreePath <路径> -Preview` 输出删除预案。删除完成后必须同步更新 `briefs/WORKTREE-INDEX.md` 中对应代码位置。
-
-当用户要求“提交当前功能分支并合入某个测试/集成分支”时，必须先读取 `scripts/INDEX.md`，再使用 `scripts/publish-to-branch.cmd` 先执行 `-Preview`。确认后才可执行；目标分支占用、远端拒绝或其他失败必须停止并请求人工决定，禁止手写 checkout / merge / push 流程绕过脚本。若 Git 合并冲突，必须再读取 `rules/merge-verification.md`，按 `VerifyConflict` → `CompleteConflict` 继续，不得直接提交 merge。
-
-当需求方案设计或复杂代码理解需要大量查询函数、类、引用、调用关系时，先按项目内索引、代码导航与检索工具核验；简单文本检索、文件定位和日志查看仍优先使用 `rg` / 常规只读命令。
-
-当用户要求“查看当前 Git 状态 / worktree 状态 / 测试分支占用 / Git 仪表盘”时，进入**只读看板模式**，允许在根目录直接执行：
-
-```powershell
-.\scripts\git-dashboard.cmd -Board
-```
-
-只读看板模式的输出约束：
-
-- 只展示命令结果和必要标题。
-- 不做原因分析、风险延伸、优化建议。
-- 不主动提出下一步操作。
-- 若必须保留固定回答结构，`[直接执行]` 放看板，`[深度交互]` 写 `无，当前为只读看板查询。`
-
-如用户明确要求最近提交信息，再执行：
-
-```powershell
-.\scripts\git-dashboard.cmd -Detailed
-```
-
-当用户要求“查数据库 / 查表结构 / 查字段 / 看建表语句 / 执行只读 SQL 分析”时，必须先读取 `scripts/INDEX.md`。如果当前工作站未安装 db-analysis 可选能力，说明未启用并给出安装提示；如果已安装，则按目标执行：
-
-```powershell
-.\scripts\db-analysis.cmd -ListTargets
-.\scripts\db-analysis.cmd -Target <name> -Action tables
-```
-
-PostgreSQL/Hologres targets additionally require `-Database <database>` and `-Schema <schema>`; see `scripts/INDEX.md` for the safe command form.
-
-当用户要求“查云效任务 / 查工作项 / 查需求 / 查迭代 / 创建或更新云效工作项 / 查看流水线”时，先检查 `.codex/skills/yunxiao-workstation/SKILL.md` 是否存在。若不存在，说明 Yunxiao 可选能力未启用；若存在，必须先读取该 skill，再使用工作站本地 `yunxiao` MCP。不要把云效 token 写入回复、提交信息或共享文档。创建、更新、评论、状态流转或运行流水线前必须先展示中文预案并等待人工确认。流水线自动化默认未启用；只有本地个人配置白名单中的流水线才允许执行。
-
-当用户要求“某个需求对应哪个前端/后端目录、哪个分支”时，必须读取 `briefs/WORKTREE-INDEX.md`。不要从 Agent 会话名、交接文档或历史状态文件推断当前代码位置。
-
-当用户要求“测试文档 / 测试要点 / 给测试同事的说明 / 功能测试说明 / 回归范围 / 提测说明”时，必须先读取 `rules/tester-note.md`。输出应面向测试同事，拒绝专业术语，简洁说明原本现状、本次修改、测试入口和重点验证；回归范围按代码触及程度标明重要性，只有整条代码线完全没有触及时才写不需要回归。
-
-当用户要求“检查报告 / 改动范围报告 / 影响范围说明 / 证明没有改其他逻辑 / 前端改动说明 / vibe 前端检查 / 给我看改了哪里”时，必须先读取 `rules/change-report.md`。输出面向开发者/负责人，不需要复述需求背景；必须说明改动范围、改动后的变化、未改变的原有逻辑和证明依据。
-
-当用户明确要求“首版代码 Review 导航图 / 未提交 diff 调用链图 / 在 IDEA 对照检查代码”时，必须先读取 `rules/first-pass-code-review.md`。该操作仅服务于提交前人工核对；只生成当前未提交 diff 的入口、主调用链、关键改动点和流程图，不输出风险、测试或上线结论，不进入上线前 Review 角色。
-
-当用户要求“上线前代码 Review / 上线检查 / 增量功能影响评估 / 前后端 Review 报告”或明确说“你现在属于 review 职责”时，必须先读取 `rules/review-role-guide.md`、`rules/review-standard.md` 和 `rules/review-report.md`。Review 默认只读，只审查指定基线到当前代码的 diff 及其直接调用链；不处理历史问题、无关模块、合并冲突或发布操作。
-
----
-
-## 四、根项目注册表
-
-> 根项目与 Worktree 父目录只在 `rules/worktree.md` 维护，避免多处注册表不同步。
-
----
-
-## 五、需求简报索引
-
-> 已创建最小 brief 或完整方案的需求见 `briefs/INDEX.md`。需求名 = worktree 名 = brief 文件夹名。
-> 需求对应的前端/后端代码位置和分支见 `briefs/WORKTREE-INDEX.md`。
-
----
-
-## 六、执行阶段指引
-
-### 6.0 规则归属边界
-
-- 工作站 `rules/` 中的角色指导、个人编码风格、测试/验证规范、Review 报告和测试说明规范属于设计层，统一维护在工作站，不复制到具体项目。
-- 项目级 `AGENTS.md` / `CLAUDE.md` 只保留项目入口；从项目或 worktree 启动时，先通过入口找到工作站 `briefs` 和相关 `rules`，再按需求类型读取。
-- 项目内只维护项目事实：代码结构、实际构建/测试入口、项目专属约束、项目级 MCP 和项目级 Hook。
-
-### 6.1 执行 Session 自动发现（强制）
-
-当在 worktree 目录下启动执行 session 时，Agent **必须先执行以下步骤**，无需用户手动指定方案路径：
-
-1. **提取需求名**：从 worktree 路径中提取（如 `worktrees/project-api-worktree/example-feature` → `example-feature`）
-2. **读取需求简报索引**：`__WORKSPACE_ROOT__\briefs\INDEX.md`
-3. **搜索方案**：在 `__WORKSPACE_ROOT__\briefs/` 下搜索与需求名匹配的文件夹
-   ```powershell
-   Get-ChildItem -Path __WORKSPACE_ROOT__\briefs -Directory -Recurse -Filter "<需求名>"
-   ```
-4. **读取方案文件**：按顺序读取 `design.md` → `api-contract.md`（如涉及）→ `backend-plan.md`（后端）或 `frontend-plan.md`（前端）→ `agent-guide.md`（如存在；历史旧名兼容）。先理解全局设计，再依据计划实施；交接记录不覆盖方案。
-   - 执行期间用户或其他 Agent 可能继续更新方案；每次开始实现、继续中断任务、切换阶段或发现上下文冲突时，必须重新读取相关文件，以磁盘最新内容为准。
-5. **cross 双角色读取**：如果匹配路径属于 `__WORKSPACE_ROOT__\briefs\cross\<需求名>\`，必须额外读取：
-   - `__WORKSPACE_ROOT__\rules\backend-role-guide.md`
-   - `__WORKSPACE_ROOT__\rules\frontend-role-guide.md`
-   - `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`
-   - 当前需求下的 `backend-plan.md` 与 `frontend-plan.md`
-
-强制约束：
-
-- 工作区需求简报唯一根目录是 `__WORKSPACE_ROOT__\briefs`。
-- brief 是可持续更新的执行事实源；不得以会话记忆、旧摘要或历史交接覆盖磁盘上的最新 brief 内容。
-- 执行中依据代码事实与用户讨论调整决策时，按 `rules/task-lifecycle.md` 第八节同步相关 briefs；用户只需审核 `design.md`，故关键变化必须在其中可见。用户要求提交/发布前对齐 briefs 时，先核对当前 diff 与已确认变化，再修正过期文档并指出未确认偏离。
-- 项目或 worktree 内的 `tasks/` 不是工作区需求简报入口，禁止用它推断方案路径或前后端执行目录。
-- 项目内 `tasks/lessons.md` 只能作为项目经验教训参考，不能覆盖 `__WORKSPACE_ROOT__\briefs/<类型>/<需求名>/` 下的设计和计划。
-- 新交接文档统一命名为 `agent-guide.md`；历史 `需求-agent-guide.md`、`handoff-agent-guide.md` 只做兼容读取。
-- cross 需求默认由同一个 Agent 承担前端+后端两个角色；通用角色职责只维护在 `rules/backend-role-guide.md` 与 `rules/frontend-role-guide.md`。
-- 用户指定 Review 职责时，额外读取 `rules/review-role-guide.md`，并严格遵守其 diff 范围和只读边界。
-
-> **目的**：Agent 自动发现上下文，用户不再需要手动粘贴方案文件路径。
-
+- 先通过项目导航和精确检索定位，再核验源码。FastCtx 可用时，文件定位优先 `glob`，内容/上下文优先 `grep`，多文件批读用 `inspect_local_file`；复杂正则、中文及转义风险高的查询使用 FastCtx。Git、构建、测试和管道处理用 Shell。
+- 穷尽性结论需说明范围：优先 `head_limit: 0` 单次取全；触及上限先收窄再查，不能用截断结果证明“已找全”。offset 跨页仅用于期间无写入的目标；`Complete` 不代表多页属于同一快照。
+- FastCtx grep 遵守忽略规则；查忽略内容用 `rg --no-ignore`，发现忽略文件用 `glob` 的 `filter_mode: "all"`。跨工具比较先统一口径。
+- 回答分 `[直接执行]`（结果）与 `[深度交互]`（必要的目标质疑、代价或替代建议），不为凑结构反复解释。Git 只读看板只展示结果和必要标题，细则见脚本索引。
+- 目标不清、关键路径取舍、越界影响或破坏契约需先对齐，暂停依赖该决定的操作；不妨碍安全的只读核验。发现更短、更低成本路径应直接说明。

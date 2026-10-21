@@ -1,0 +1,39 @@
+# Independent business repositories
+/projects/*
+!/projects/README.md
+/worktrees/*
+!/worktrees/README.md
+# Local requirements and business knowledge
+/briefs/
+/knowledge/*
+!/knowledge/README.md
+/artifacts/*
+!/artifacts/README.md
+/tmp/*
+!/tmp/README.md
+/plans/*
+!/plans/README.md
+# Local configuration, credentials and approvals
+/.codex/secrets/*
+!/.codex/secrets/*.example.*
+/.claude/settings.local.json
+/scripts/db-targets.json
+/scripts/private/
+**/credentials.json
+**/accounts.local.json
+**/*.local.json
+**/maintenance-approval.json
+**/local-git-hook-bypass-approval.json
+.env
+.env.*
+!.env.example
+# Runtime output
+**/__pycache__/
+*.py[cod]
+**/node_modules/
+**/.venv/
+*.stackdump
+*.bak
+*.bak2
+*.tmp
+*.log

@@ -8,6 +8,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    throw 'PowerShell 7 is required. Run this installer with pwsh.exe.'
+}
 $source = Join-Path $PSScriptRoot "templates\workspace"
 $optionsRoot = Join-Path $PSScriptRoot "templates\options"
 $destination = [System.IO.Path]::GetFullPath($WorkspaceRoot)
@@ -32,6 +35,13 @@ if ($IncludeDbAnalysis) {
         throw "Optional db-analysis template not found: $dbOption"
     }
     Get-ChildItem -Force -LiteralPath $dbOption | Copy-Item -Destination $destination -Recurse -Force
+    $dbSkillSource = Join-Path $PSScriptRoot "skills\db-analysis"
+    $dbSkillParent = Join-Path $destination "skills"
+    if (-not (Test-Path -LiteralPath $dbSkillSource)) {
+        throw "Optional db-analysis skill not found: $dbSkillSource"
+    }
+    New-Item -ItemType Directory -Force -Path $dbSkillParent | Out-Null
+    Copy-Item -LiteralPath $dbSkillSource -Destination (Join-Path $dbSkillParent "db-analysis") -Recurse -Force
 }
 
 if ($IncludeYunxiao) {
@@ -42,7 +52,7 @@ if ($IncludeYunxiao) {
     Get-ChildItem -Force -LiteralPath $yunxiaoOption | Copy-Item -Destination $destination -Recurse -Force
 }
 
-$textFiles = Get-ChildItem -Recurse -File -LiteralPath $destination |
+$textFiles = Get-ChildItem -Force -Recurse -File -LiteralPath $destination |
     Where-Object { $_.Extension -in '.md', '.ps1', '.cmd', '.py', '.json', '.yaml', '.toml' }
 foreach ($file in $textFiles) {
     $content = Get-Content -Raw -LiteralPath $file.FullName
@@ -58,13 +68,13 @@ foreach ($file in $textFiles) {
 Write-Host "Multi-project workstation installed at: $destination"
 Write-Host "Workspace-local Codex and Claude hook templates were installed under .codex and .claude."
 if ($IncludeDbAnalysis) {
-    Write-Host "Optional db-analysis workspace scripts were installed. Copy skills\db-analysis to your Codex skills directory before use."
+    Write-Host "Optional db-analysis scripts and workspace-local skill were installed under scripts and skills."
 } else {
-    Write-Host "Optional db-analysis workspace scripts were not installed. Re-run with -IncludeDbAnalysis if needed."
+    Write-Host "Optional db-analysis was not installed. Existing workspaces require a selective upgrade; do not rerun the installer over them."
 }
 if ($IncludeYunxiao) {
     Write-Host "Optional Yunxiao MCP and workspace skill templates were installed. Fill .codex\secrets locally and enable the MCP block in .codex\config.toml before use."
 } else {
-    Write-Host "Optional Yunxiao MCP and workspace skill templates were not installed. Re-run with -IncludeYunxiao if needed."
+    Write-Host "Optional Yunxiao was not installed. Existing workspaces require a selective upgrade; do not rerun the installer over them."
 }
 Write-Host "Next: open the workspace root in Codex/Claude and trust the local hook definitions if prompted."

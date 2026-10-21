@@ -6,16 +6,16 @@
 
 ## 方案必须包含的章节
 
-所有技术设计方案（`design.md`）必须包含：
+所有技术设计方案（`spec/design.md`）必须包含：
 1. **需求背景**：一句话说明要解决的业务问题
 2. **技术选型**：为什么选择这个方案，排除了哪些替代方案
 3. **数据模型**：新增/修改的表结构、字段、索引
-4. **接口设计**：列出入口、核心请求/响应、默认值、空值与枚举语义及兼容影响；存在 `api-contract.md` 时链接该文件，字段级完整定义以契约为准
+4. **接口设计**：列出入口、核心请求/响应、默认值、空值与枚举语义及兼容影响；存在 `spec/api-contract.md` 时链接该文件，字段级完整定义以契约为准
 5. **文件变更清单**：具体到类名、方法名、文件路径
 6. **实现步骤**：可执行的任务拆分，标注依赖关系
 7. **风险与回滚**：潜在问题和应对策略
 
-`design.md` 是用户唯一必须人工审核的方案文件，应自包含到足以判断业务行为、方案取舍、旧数据/旧路径影响、前后端协作和上线风险；不能把关键决定只放在计划、契约或交接文件。详细字段清单与操作步骤可分别放入契约和计划，但其关键语义须在 design 中可见。
+`spec/design.md` 是用户唯一必须人工审核的方案文件，应自包含到足以判断业务行为、方案取舍、旧数据/旧路径影响、前后端协作和上线风险；不能把关键决定只放在计划、契约或交接文件。详细字段清单与操作步骤可分别放入契约和计划，但其关键语义须在 design 中可见。
 
 ---
 
@@ -32,15 +32,17 @@
 
 每个复杂需求产出技术设计方案：
 
-- 保存路径：`__WORKSPACE_ROOT__\briefs\[cross|backend|frontend]\[需求标识]\design.md`
+- 保存路径：`__WORKSPACE_ROOT__\briefs\[cross|backend|frontend]\[需求标识]\spec\design.md`，需求根 README 导航到当前文档与 runtime。
 - 内容：技术方案概要、接口契约、数据模型、文件变更清单
-- 复杂需求拆分为：`backend-plan.md`、`frontend-plan.md`
+- 复杂需求拆分为：`spec/backend-plan.md`、`spec/frontend-plan.md`
+
+需求根 `README.md` 必须按 [需求 README 模板](brief-readme-template.md)生成并校验链接，先路由到 [工作站 执行入口](execution-entry.md)，再导航本需求实际存在的 spec 与 runtime。README 不复制公共角色、编码风格或工具说明；不为填满模板创建空文档。该要求在实际产出方案时执行，不改变新建登记阶段不预建模板的约定。
 
 执行计划面向 Agent，按任务写明当前代码入口、预期行为、不得改变的旧路径、必要联动、验证输入与完成证据。入口应以当前代码核验，路径和方法名变化时同步修正。计划提供精确实施指引，但不代替 Agent 对全局设计和代码事实的判断。
 
 每个 `*-plan.md` 至少按下面的顺序组织；不适用的项写“无”，不要机械扩写：
 
-1. **执行前核对**：关联的 `design.md`、适用的 `api-contract.md`，以及需要在源码中核实的入口与当前行为。
+1. **执行前核对**：关联的 `spec/design.md`、适用的 `spec/api-contract.md`，以及需要在源码中核实的入口与当前行为。
 2. **不可改变的约束**：旧路径、默认关闭行为、旧数据/空值语义、明确排除的项目或链路。
 3. **逐项改动**：目标模块、文件/类/方法、输入与输出、应加入或修改的条件、关联写入方和读取方、需要保留的原分支。路径是定位线索；源码不符时先追踪真实入口，不凭过期路径盲改。
 4. **验证矩阵**：正常、关闭、缺省、旧数据、异常与边界输入；对应测试类、构建入口和可接受的完成证据。
@@ -48,13 +50,15 @@
 
 计划应具体到较弱模型能逐项执行和核验，但不要预写整段实现代码或把未经证实的猜测写成代码事实。
 
-执行中方案发生变化时，执行 Agent 按 `rules/task-lifecycle.md` 第八节同步最新事实；`design.md` 保留原方案到当前决定的简短变化说明、原因和影响，供用户只审核本文件。不要把执行进度、长篇排错记录或会话历史堆入设计。
+执行中方案发生变化时，执行 Agent 按 `rules/task-lifecycle.md` 第八节同步最新事实；`spec/design.md` 保留原方案到当前决定的简短变化说明、原因和影响，供用户只审核本文件。不要把执行进度、长篇排错记录或会话历史堆入设计。
+
+大范围删除或重写方案前说明涉及范围，由用户决定是否保留旧版本；默认不创建快照，禁止自行生成 `.bak` 等备份，见 `rules/task-lifecycle.md` 第九节。当前文档放需求 `spec/`，执行材料按第十节归入 `runtime/`。
 
 ---
 
 ## 前端方案解释要求
 
-若审核者主要熟悉后端而不熟悉前端，设计方案中涉及前端的部分应包含充分的解释性表述，包括但不限于：
+当前项目前端由后端开发人员兼任，前端知识储备有限。设计方案中涉及前端的部分，必须包含充分的解释性表述，包括但不限于：
 
 - **组件选择理由**：为什么用这个组件，不用其他替代方案
 - **状态管理方案**：数据如何流转，哪些放 Pinia、哪些放组件内
@@ -82,24 +86,23 @@
 
 ## 前后端协作规范
 
-### 同一 Agent 双角色模式
+### cross 单 Agent 双角色
 
-cross 需求默认由同一个 Agent 承担后端+前端两个角色。
+cross 需求默认由同一个 Agent 承担后端角色与前端角色；即使代码仓库前后端分离、存在两个 worktree，也不默认拆分为两个 Agent。
 
-执行或维护 cross 方案时，必须固定读取：
+通用角色职责不写入每个 brief，固定维护在：
 
 - `__WORKSPACE_ROOT__\rules\backend-role-guide.md`
 - `__WORKSPACE_ROOT__\rules\frontend-role-guide.md`
-- `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`
 
-`backend-plan.md` / `frontend-plan.md` 只写当前需求特有的改动计划，不重复维护通用角色职责。
+`spec/backend-plan.md` 和 `spec/frontend-plan.md` 只写本需求特有的任务拆分、代码路径、接口字段和验证点。
 
 ### 契约优先
 
-前后端通过 `api-contract.md` 协作，该文件是**唯一真相源**：
+存在前后端接口协作时，双方通过 `spec/api-contract.md` 协作；它是字段级接口定义的**唯一真相源**，`spec/design.md` 保留供人工审核的关键接口语义摘要：
 - 后端开发依据契约实现接口
 - 前端开发依据契约对接接口
-- 契约变更须写入 `api-contract.md`，并同步更新 `design.md` 的关键语义摘要；执行 Agent 可依据用户确认的变化直接维护，不必重开设计会话
+- 契约变更由确认该变化的 Agent 同步更新 `spec/api-contract.md` 与 `spec/design.md` 摘要，不要求重新开启 design session；未经确认的业务取舍不得自行写成已定方案
 
 ### 协作流程
 
@@ -107,12 +110,12 @@ cross 需求默认由同一个 Agent 承担后端+前端两个角色。
 1. 需求评审（人）：确定前后端配合点
 2. 接口设计（本 design session）：产出 api-contract.md
 3. 执行开发（同一 Agent）：按 backend-role-guide 与 frontend-role-guide 依次处理后端/前端
-4. 联调（人）：各自本地验证，问题反馈回到步骤 2
+4. 联调核对（同一 Agent + 人）：核对契约、字段、交互和测试环境结果，问题反馈回到步骤 2
 ```
 
 ### 契约维护
 
-- 契约文件与设计方案同目录，命名固定为 `api-contract.md`
+- 契约文件与设计方案同目录，命名固定为 `spec/api-contract.md`
 - 枚举值、字段必填性变化 = 契约变更，必须更新文档
 - 后端完成接口后，Swagger 可作为辅助验证工具，但非权威来源
 
@@ -120,9 +123,9 @@ cross 需求默认由同一个 Agent 承担后端+前端两个角色。
 
 ```
 briefs/
-├── cross/         # 前后端协作需求 → 产出 design.md + api-contract.md + backend-plan.md + frontend-plan.md
-├── backend/       # 纯后端需求 → 产出 design.md + backend-plan.md
-└── frontend/      # 纯前端需求 → 产出 design.md + frontend-plan.md
+├── cross/<需求名>/spec/      # design.md + api-contract.md + backend-plan.md + frontend-plan.md
+├── backend/<需求名>/spec/    # design.md + backend-plan.md
+└── frontend/<需求名>/spec/   # design.md + frontend-plan.md
 ```
 
 ---
@@ -131,9 +134,12 @@ briefs/
 
 关闭 design session 前，确认：
 - [ ] 技术设计方案已保存到 `briefs/[类型]/[需求]/`
-- [ ] 接口契约（如有）已保存为 `api-contract.md`
+- [ ] 需求 README 已按模板生成，统一执行入口与实际资料链接有效，按需能力可发现且未被列为全量必读
+- [ ] `spec/design.md` 已写明目标、边界与验收关注点，足以单独供用户审核
+- [ ] 接口契约（如有）已保存为 `spec/api-contract.md`
 - [ ] 枚举值已显式列出，无外部依赖
 - [ ] 文件变更清单已具体到类名/方法名
 - [ ] 我已审核通过设计方案的业务理解
 - [ ] `briefs/INDEX.md` 已同步更新
+- [ ] 用户明确确认方案后，已执行 `sync-workstation-state.ps1 -Action DesignReady` 同步状态
 

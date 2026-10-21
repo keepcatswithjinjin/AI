@@ -1,133 +1,73 @@
-# 多项目工作区结构维护清单
+# 工作站结构地图
 
-> 本文件是当前多项目工作区的全局结构地图。检查或调整工作区结构时，先读本文件。
-
----
+本文件登记文件归属与维护边界；具体操作规则只引用，不复制。模板只含通用框架，不携带真实业务、项目注册或本机配置。
 
 ## 一、目录地图
 
-| 路径 | 类型 | 职责 | 维护方式 |
-|------|------|------|----------|
-| `README.md` | 人工入口 | 说明工作区用途和日常入口 | 手工维护 |
-| `CLAUDE.md` | Agent 入口 | Claude 在根目录的操作路由 | 手工维护 |
-| `AGENTS.md` | Agent 入口 | Codex/通用 Agent 在根目录的操作路由 | 手工维护 |
-| `scripts/git-dashboard.cmd` / `scripts/git-dashboard.ps1` | 工具入口 | Windows 下查看 Git/worktree 状态 | 随脚本维护 |
-| `scripts/new-worktree.cmd` / `scripts/new-worktree.ps1` | 工具入口 | Windows 下受控新增 worktree | 随脚本维护 |
-| `scripts/db-analysis.cmd` / `scripts/db-analysis.ps1` | 可选工具入口 | Windows 下查询 MySQL 数据库结构和分析 SQL | 启用数据库能力时随脚本维护 |
-| `scripts/db-targets.json` | 可选本地状态 | 记录常用数据库连接目标 | 手工维护，不提交 |
-| `.codex/mcp/yunxiao-mcp.cmd` | 可选工具入口 | 启动工作站本地云效 MCP | 启用云效能力时随模板维护 |
-| `.codex/secrets/yunxiao.env.cmd` | 可选本地状态 | 记录云效 token 环境变量 | 手工维护，不提交 |
-| `.codex/secrets/yunxiao.personal.json` | 可选本地状态 | 记录个人云效组织、项目、别名和可选流水线白名单 | 手工维护，不提交 |
-| `scripts/remove-worktree.cmd` / `scripts/remove-worktree.ps1` | 工具入口 | 受控删除 worktree | 随脚本维护 |
-| `scripts/publish-to-branch.cmd` / `scripts/publish-to-branch.ps1` | 工具入口 | 受控提交、合入指定分支；冲突时冻结输入、核验后恢复功能分支 | 随脚本维护 |
-| `scripts/INDEX.md` | 脚本索引 | 说明 scripts 内脚本和状态文件职责 | 手工维护 |
-| `vibe-coding-新项目初始化指南.md` | 流程指南 | 新项目接入当前工作区 | 手工维护 |
-| `.codex/config.toml` | 工作站本地配置 | Codex 在本工作站的 Hook 注册入口，不承载用户级默认配置 | 由 `governance/agent-guard/sync-hooks.ps1` 维护 |
-| `.claude/settings.local.json` | 工作站本地配置 | Claude Code 在本工作站的 Hook 注册入口，不写入用户级配置 | 手工维护，仅人工修改受保护文件 |
-| `rules/` | 规则目录 | 设计、需求、worktree、交接规则 | 手工维护 |
-| `governance/agent-guard/` | 跨 Agent 全局治理 | Codex / Claude Hook、跨项目受保护路径/SQL 策略，以及人工签发的临时维护审批 | 手工维护，仅人工修改受保护文件 |
-| `rules/INDEX.md` | 规则索引 | rules 内部文件职责和同步触发 | 手工维护 |
-| `rules/backend-role-guide.md` | 角色规则 | cross 需求中同一 Agent 的后端角色职责 | 手工维护 |
-| `rules/backend-coding-style.md` | 编码规则 | 通用后端编码习惯、分层、查询、事务和对象构造规则 | 手工维护 |
-| `rules/frontend-role-guide.md` | 角色规则 | cross 需求中同一 Agent 的前端角色职责 | 手工维护 |
-| `rules/tester-note.md` | 输出规则 | 给测试同事看的功能测试说明、测试入口和回归范围规范 | 手工维护 |
-| `rules/change-report.md` | 输出规则 | 面向开发者/负责人的改动范围、影响范围和未改旧逻辑证明规范 | 手工维护 |
-| `rules/first-pass-code-review.md` | 输出规则 | 提交前首版人工代码核对的调用链导航与流程图边界；仅用户明确触发 | 手工维护 |
-| `rules/review-standard.md` / `rules/review-report.md` / `rules/review-role-guide.md` | 输出规则 | 上线前 Review 标准、报告结构和独立角色边界 | 手工维护 |
-| `rules/merge-verification.md` | 流程规则 | Git 冲突输入冻结、分类核验、人工决策和编译边界 | 手工维护 |
-| `scripts/` | 脚本目录 | 工作区自动化脚本 | 按工具维护 |
-| `briefs/` | 需求简报目录 | 最小 brief、复杂需求方案、接口契约、执行计划 | 按需求维护 |
-| `briefs/INDEX.md` | 需求简报索引 | 已创建最小 brief 或完整方案的需求列表，不记录开发状态 | 按 brief 维护 |
-| `briefs/WORKTREE-INDEX.md` | 代码位置索引 | 记录需求 brief 对应的前端/后端代码位置和分支 | 创建、删除、迁移 worktree 时维护 |
-| `artifacts/` | 文件产物目录 | 长期保存或跨项目复用的非源码文件产物 | 按产物维护 |
-| `artifacts/README.md` | 产物目录说明 | 定义 artifacts 的存放边界和命名约束 | 手工维护 |
-| `worktrees/` | Worktree 根目录 | 新 worktree 的统一父目录 | 按注册表维护 |
-| `<项目>/` | 主项目仓库 | 稳定主工作区，执行阶段入口 | 项目自身维护 |
+| 路径 | 职责 |
+| --- | --- |
+| AGENTS.md | 公共 Agent 入口：职责、核心约束与按需路由 |
+| CLAUDE.md | 仅导入 AGENTS.md，不重复正文 |
+| README.md | 人工概览与导航 |
+| .gitignore | 用户启用根目录本地 Git 后的排除边界；安装不自动 git init |
+| rules/INDEX.md | 规则职责与同步清单 |
+| rules/execution-entry.md | 执行身份、必需上下文与按需能力路由 |
+| rules/brief-readme-template.md | 需求 README 的生成约定，不预建空 brief |
+| rules/verification.md | Maven reactor 测试与验证证据 |
+| rules/ | 设计、角色、风格、Review、交接与生命周期规则 |
+| scripts/INDEX.md | 工作站脚本及可选工具入口 |
+| scripts/new-worktree.*、remove-worktree.* | 受控创建/删除、JSON 结果与代码位置索引同步 |
+| scripts/publish-to-branch.* | 发布、冲突输入冻结、核验及显式完成 |
+| scripts/sync-workstation-state.ps1 | 登记与单向阶段同步，不推断部署成功 |
+| governance/agent-guard/ | 现有跨 Agent 治理；受保护文件由人工维护 |
+| .codex/、.claude/ | 工作站本地 Hook 模板；不修改用户级配置 |
+| projects/ | 独立主项目容器；不得把业务代码提交到工作站仓库 |
+| worktrees/ | 需求执行目录；不得在容器层开发 |
+| briefs/INDEX.md | 复杂需求登记，不维护进度；登记时方案可尚不存在 |
+| briefs/WORKTREE-INDEX.md | 需求代码位置与分支，执行前核验实时 Git |
+| briefs/WORKSTATION-STATE.json | 状态脚本按需生成；不预填真实任务 |
+| briefs/<类型>/<需求名>/README.md | 单需求导航，不复制公共规则 |
+| briefs/<类型>/<需求名>/spec/ | 当前设计、契约、计划与按需测试说明 |
+| briefs/<类型>/<需求名>/runtime/ | 阶段交接、验证证据、冲突核验及明确触发的代码导航 |
+| knowledge/ | 可复用的业务知识、架构参考、操作方法与辅助能力；模板只有目录说明 |
+| artifacts/ | 用户保存的参考附件与交付产物，不强制绑定需求 |
+| tmp/ | 用户定期清理的临时杂物、缓存、profile 与中间文件 |
+| plans/ | 待改进计划，不构成实施授权 |
 
----
+可选能力：数据库安装到 scripts/ 与 skills/db-analysis/；云效安装到 .codex/mcp/ 与 .codex/skills/。真实目标配置、凭据及个人组织/项目资料不由通用模板维护。
 
-## 二、唯一真相源
+## 二、唯一维护位置
 
-| 信息 | 唯一维护位置 | 其他文件处理方式 |
-|------|--------------|------------------|
-| 根项目注册表 | `rules/worktree.md` | 只引用，不复制 |
-| 新 worktree 路径规则 | `rules/worktree.md` | 只引用，不复制 |
-| Git/worktree 状态扫描 | `scripts/git-dashboard.ps1` | 项目列表从 `rules/worktree.md` 自动读取 |
-| Worktree 创建入口 | `scripts/new-worktree.ps1` | 从 `rules/worktree.md` 读取项目注册表并统一创建 worktree |
-| 数据库目标配置 | `scripts/db-targets.json` | 只记录本地数据库连接目标，不复制到项目内 |
-| 云效个人配置 | `.codex/secrets/yunxiao.personal.json` | 只记录个人组织/项目路由与可选流水线白名单，不复制到项目内 |
-| 跨 Agent 治理策略 | `governance/agent-guard/policy.json` | 定义受保护路径、高风险路径和 SQL 防护策略 |
-| Codex Hook 注册 | `.codex/config.toml` | 由 `governance/agent-guard/hook-registry.json` 生成，不在用户级 Codex 配置维护工作站治理 |
-| Claude Hook 注册 | `.claude/settings.local.json` | 仅在当前工作站本地维护，不写入用户级 Claude 配置 |
-| Brief 对应代码位置和分支 | `briefs/WORKTREE-INDEX.md` | 不在交接文档或会话状态中重复维护 |
-| cross 双角色职责 | `rules/backend-role-guide.md`、`rules/frontend-role-guide.md` | `briefs/<类型>/<需求>/` 只写需求特有计划，不复制通用角色说明 |
-| 通用后端编码习惯 | `rules/backend-coding-style.md` | 项目特有规则保留在项目级 `AGENTS.md` / `CLAUDE.md` |
-| 给测试同事的测试说明规范 | `rules/tester-note.md` | 只定义输出格式、回归范围判断和写作边界，不替代测试方案 |
-| 面向开发者的改动检查报告规范 | `rules/change-report.md` | 只定义改动范围、影响范围和未改旧逻辑证明，不替代测试说明 |
-| 首版人工代码核对导航 | `rules/first-pass-code-review.md` | 基于当前未提交 diff 生成导航和流程图；不属于上线前 Agent Review |
-| 保存型文件产物 | `artifacts/` | 不进入 `briefs/INDEX.md` 或 `briefs/WORKTREE-INDEX.md`，不用于推断需求状态 |
-| Worktree 删除入口 | `scripts/remove-worktree.ps1` | 统一执行删除前检查和残留清理 |
-| 功能分支发布入口 | `scripts/publish-to-branch.ps1` | 统一执行文件范围检查、源分支推送、目标分支合并与恢复源分支 |
-| 合并冲突核验 | `rules/merge-verification.md` + `scripts/publish-to-branch.ps1` | 冲突时冻结三方输入；核验通过并显式确认后才提交、推送 |
-| 脚本目录路由 | `scripts/INDEX.md` | 只做脚本入口说明，不复制脚本实现 |
-| 新需求生命周期 | `rules/task-lifecycle.md` | 只引用，不复制 |
-| 设计方案格式 | `rules/design.md` | 只引用，不复制 |
-| 执行交接要求 | `rules/handoff.md` | 只引用，不复制 |
-| 已有需求简报 | `briefs/INDEX.md` | 登记已创建最小 brief 或完整方案的需求，不记录开发状态 |
-| 新项目接入流程 | `vibe-coding-新项目初始化指南.md` | 引用 rules，不复制详细规则 |
+- 项目注册与 worktree 路径：rules/worktree.md。
+- 需求决策：当前 spec；阶段停点与证据：runtime/agent-guide.md，不能覆盖实时 Git。
+- 公共身份、风格和工具细则：rules/ 与对应 Skill，不复制到每个需求。
+- 业务知识：knowledge；原始附件及交付：artifacts，不靠附件推断需求状态。
+- 数据库/云效工具与治理：保留各自配置边界，未安装不视为可用。
 
----
+## 三、项目与 worktree
 
-## 三、Worktree 新结构
+主项目位于 __WORKSPACE_ROOT__\projects\<项目>，执行目录位于 __WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>。注册表中的项目仅是待替换示例，不代表实际仓库存在。
 
-新 worktree 统一放在：
+通用模板更新 master 时保留用户现场：要求根项目干净且只允许快进，不复制个人 Col 的自动丢弃改动策略。
 
-```text
-__WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>
-```
+## 四、维护联动
 
-当前项目父目录示例：
+- 目录与入口变更：检查本文件、README、AGENTS、rules/INDEX；CLAUDE 只检查导入。
+- brief 接入变更：检查执行入口、README 模板、设计、生命周期、角色与交接规则。
+- 脚本行为变更：同步 scripts/INDEX 与对应规则，补充离线测试。
+- 可选能力变更：基础安装和可选安装均须验证，不覆盖用户配置。
+- 框架同步与升级：仅同步通用能力，业务、本地凭据和实例状态不进入模板。
 
-| 主项目 | 新 Worktree 父目录 |
-|--------|--------------------|
-| `project-api` | `__WORKSPACE_ROOT__\worktrees\project-api-worktree` |
-| `project-web` | `__WORKSPACE_ROOT__\worktrees\project-web-worktree` |
+## 五、Git 与历史资料
 
-历史 worktree 不迁移，完成后删除。
+工作区默认不初始化 Git。用户明确启用本地规则版本控制后，业务仓库、briefs、知识内容、产物、运行材料和本机配置由 .gitignore 排除；模板框架本身由工具包仓库管理。
 
----
+历史平铺 brief、旧交接、旧 artifacts 核验材料只兼容读取，不自动迁移删除；新材料按 spec/runtime 归属写入，不新增快照或 .bak。
 
-## 四、更新检查规则
+## 六、文件创建与写入边界
 
-| 如果修改了 | 必须检查/更新 |
-|------------|---------------|
-| 根项目注册表 | `rules/worktree.md`、`STRUCTURE.md`、对应 `worktrees/<项目>-worktree/README.md` |
-| worktree 路径规则 | `rules/worktree.md`、`rules/task-lifecycle.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`vibe-coding-新项目初始化指南.md`、`STRUCTURE.md` |
-| 新增规则文件 | `rules/INDEX.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
-| 新增或调整根工具入口 | `README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md`、必要时 `rules/INDEX.md` |
-| 调整脚本目录结构 | `scripts/INDEX.md`、`README.md`、`STRUCTURE.md` |
-| 调整保存型文件产物目录 | `artifacts/README.md`、`README.md`、`STRUCTURE.md` |
-| 调整跨 Agent 治理 Hook 或策略 | `governance/agent-guard/README.md`、`.codex/config.toml`、`.claude/settings.local.json`、`governance/agent-guard/policy.json` |
-| 新增复杂需求 | `briefs/INDEX.md`、对应 `briefs/<类型>/<需求名>/` |
-| 创建、删除或迁移需求 worktree | `briefs/WORKTREE-INDEX.md`、必要时 `briefs/INDEX.md` |
-| 调整设计方案格式 | `rules/design.md`、`rules/task-lifecycle.md`、`STRUCTURE.md` |
-| 调整后端编码习惯 | `rules/backend-coding-style.md`、`rules/backend-role-guide.md`、`README.md`、`STRUCTURE.md` |
-| 调整测试同事说明规范 | `rules/tester-note.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
-| 调整改动检查报告规范 | `rules/change-report.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
-| 调整首版人工代码 Review 导航规范 | `rules/first-pass-code-review.md`、`artifacts/README.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
-| 调整上线前 Review 或合并冲突核验 | `rules/review-standard.md`、`rules/review-report.md`、`rules/review-role-guide.md`、`rules/merge-verification.md`、`scripts/publish-to-branch.ps1`、`scripts/INDEX.md`、`README.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
-| 调整新项目接入流程 | `vibe-coding-新项目初始化指南.md`、`STRUCTURE.md` |
-| 调整交接要求 | `rules/handoff.md`、`CLAUDE.md`、`AGENTS.md`、`STRUCTURE.md` |
-
----
-
-## 五、维护原则
-
-- 每次结构或规则调整前，先读本文件。
-- 每个事实只维护在一个唯一真相源。
-- `STRUCTURE.md` 只做地图和检查清单，不复制详细规则。
-- 已创建最小 brief 或完整方案的需求登记到 `briefs/INDEX.md`；该索引不维护开发状态。
-- `artifacts/` 保存文件产物，不承载需求生命周期、代码位置或分支状态。
-- 不维护 Agent 会话恢复状态；需求对应代码位置和分支只维护在 `briefs/WORKTREE-INDEX.md`。
-- `__WORKSPACE_ROOT__` 根目录是工作区容器，不作为 Git 仓库管理；Git 操作仅在登记项目及其 worktree 内执行。
-- Codex / Claude 工作站治理 Hook 只维护在工作站本地配置中；用户级配置不得绑定某个工作站的专属治理。
+- 新增文件先确定归属；新增目录先获授权。用户批准的固定目录模式可随对应任务创建，不逐次重复询问。
+- 需求 README/spec/runtime、受控 worktree、需求内 merge-verification 及明确要求的 code-review 属于固定模式，不预建空文件。
+- 根目录不承载临时 SQL、截图、查询输出或调试文件；临时材料进 tmp。
+- 已有目录不等于允许扩大用途；没有合适位置先说明并申请，不自行建兜底目录。
+- 不自动清理用户材料，不复制业务仓库源码，不读写凭据或修改受保护配置。

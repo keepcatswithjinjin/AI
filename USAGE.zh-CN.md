@@ -2,23 +2,26 @@
 
 ## 1. 工作站与业务项目的边界
 
-本仓库是工作站框架仓库。它只保存通用规则、脚本、治理和无凭据 skill；业务项目应克隆到安装后的工作区根目录，并继续由各自 Git 仓库管理。
+本仓库是工作站框架仓库，只保存通用规则、脚本、治理和无凭据 skill；主项目放在安装后工作区的 projects 容器，继续由各自独立 Git 管理。业务知识和项目事实由使用者维护，不从 Col 实例同步。
 
 ```text
 D:\AI-Toolkit\multi-project-workstation\   # 本仓库，受 Git 管理
 D:\Workspace\                               # 安装后的工作区容器，不初始化 Git
-  rules/ scripts/ governance/ briefs/ artifacts/
+  rules/ scripts/ governance/ briefs/ knowledge/ artifacts/ tmp/ plans/
   worktrees/                            # 各项目 worktree 的统一容器
-  project-a\                               # 独立 Git 仓库
-  project-b\                               # 独立 Git 仓库
-  worktrees\                               # 各项目 Git worktree
+  projects\project-a\                      # 独立 Git 仓库
+  projects\project-b\                      # 独立 Git 仓库
 ```
 
-不要在工作区根目录执行 `git init` 或 `git add .`。项目 Git 操作只在项目根目录或其 worktree 中执行。
+安装不会在工作区根目录执行 git init。用户明确选择本地规则版本控制后，才可初始化并按模板 .gitignore 纳管通用文件；不配置远端、不混入业务与本机资料。默认业务 Git 操作仍只在登记项目及其 worktree 内执行。工具包既有治理仍会拦截 Agent 自行 git init，需由用户手动处理，不因文档改变自动放宽。
 
 跨项目方案、接口契约和执行交接统一放在工作站的 `briefs/`，不依赖项目内的自定义任务目录。需求对应的前端/后端代码位置和分支维护在 `briefs/WORKTREE-INDEX.md`。需要长期保存或跨项目复用的文件产物放在 `artifacts/`，不要用它推断需求状态或分支。
 
+新需求先登记，不预建空设计；实际设计时生成 README 与 spec，阶段结束或暂停时自动维护 runtime/agent-guide.md。knowledge 保存整理过的业务指导，artifacts 保存用户留下的原始材料/交付文件，tmp 是用户定期清理的杂物区。模板不预填 author、OverSea 或任何其他真实主题。
+
 ## 2. 安装模板
+
+先准备 PowerShell 7 与 Git。Git 生命周期入口使用 pwsh，不回退到 Windows PowerShell 5.1。
 
 ```powershell
 Set-Location D:\AI-Toolkit\multi-project-workstation
@@ -35,13 +38,17 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 
 安装脚本仅允许写入空目录，且会把 `__WORKSPACE_ROOT__` 渲染为实际路径。随后手工维护 `rules/worktree.md`，登记自己的项目和 worktree 父目录。创建/删除 worktree 时优先使用安装后工作区内的 `scripts\new-worktree.cmd` 与 `scripts\remove-worktree.cmd`。
 
+安装同时渲染隐藏的 .codex/.claude 目录；不自动信任 Hook、连接数据库、启用云效或运行 Git。已有工作区不能通过重跑安装覆盖；可选能力后续增装也按选择性升级处理。
+
+Agent 创建/删除调用使用 `-OutputFormat Json`，登记需求传 RequirementKey 与 Role；执行前预览，删除确认后追加 Confirm。通用模板不采用 Col 个人实例的根项目强制清理/硬重置：默认要求根仓库干净且只允许快进。
+
 功能完成并需要合入测试或集成分支时，使用 `scripts\publish-to-branch.cmd`。它要求显式指定目标分支、逗号分隔的仓库相对文件清单和提交信息；先运行 `-Preview`，确认后再执行。脚本会先推送源分支并修正 upstream，再临时切换、合入并推送目标分支；目标分支占用、冲突或远端拒绝时会停止等待人工决定。
 
 ## 3. 安装数据库 skill 与本地配置（可选）
 
-只有初始化时传入 `-IncludeDbAnalysis`，安装后的工作区才会包含 `scripts\db-analysis.cmd`、`scripts\db-analysis.ps1` 和 `scripts\db-targets.example.json`。
+只有初始化时传入 `-IncludeDbAnalysis`，安装后的工作区才会包含数据库入口、配置示例和 `skills\db-analysis`。执行逻辑随工作区一起安装，不依赖用户级 Skill 目录。
 
-如需使用，将 `skills/db-analysis` 复制到 Codex 的 skill 目录（通常是 `%USERPROFILE%\.codex\skills\db-analysis`）。复制 `scripts/db-targets.example.json` 为安装后工作区的 `scripts/db-targets.json`，只在本机填写只读账号。
+如需使用，复制 `scripts/db-targets.example.json` 为工作区的 `scripts/db-targets.json`，只在本机填写连接信息。SQL 目标使用只读账号；测试 Redis 可使用读写账号，但脚本只暴露有界读取动作。Codex 与 Claude 均从工作区入口文件路由至同一份 Skill。
 
 MySQL 使用本机私有 `clientDefaultsFile`；PostgreSQL/Hologres 使用本机私有 `pgPassFile`，格式为 `host:port:database:user:password`。Hologres 与 PostgreSQL 的对象层级是“实例 → database → schema → table”，因此目标必须维护 `allowedDatabases` 和 `allowedSchemas`，查询时显式传入 `-Database`、`-Schema` 并使用 `schema.table`。
 
@@ -126,3 +133,13 @@ startup_timeout_sec = 120
 框架变更在本仓库中提交；已有工作区不会自动更新。升级前先比较模板与工作区的治理、脚本和规则，再有选择地合并。不要用模板覆盖本地数据库配置、云效 token、云效个人组织/项目目录、brief/worktree 分支索引或项目注册表。
 
 受保护的治理文件默认不能由 Agent 修改。需要维护时，由人工在安装后的 `governance\agent-guard\` 中，从 `maintenance-approval.example.json` 创建 `maintenance-approval.json` 并将其内容设为 `{ "enabled": true }`；完成后手动删除该文件或改回 `false`。该文件本身始终受保护，Agent 无法自行开启维护窗口。
+
+## 7. 本轮同步与验证（2026-10-21）
+
+- 已对齐公共 AGENTS + CLAUDE 导入、执行入口与需求 README 模板、spec/runtime、阶段自动交接、知识与产物边界、projects 容器和需求内冲突核验。
+- 补齐原有治理文档已要求、但旧脚本缺失的 JSON 结果；补齐代码位置索引同步、状态脚本、提交编码及核验后暂存区一致性检查。
+- 修复安装渲染漏掉隐藏配置目录的问题；只测试模板实例，不操作实际项目。
+- 保留原有数据库、云效与治理实现及本机配置；不照搬 Col 的测试库写入能力，不移植业务资料或个人注册表。
+- 历史平铺 brief 与 artifacts 只兼容读取，不自动迁移。模板同步不是对已安装工作区的自动升级。
+
+运行 `pwsh -NoProfile -File .\tests\test-workspace-template.ps1` 做离线验证：生成隔离实例，检查默认/可选能力、隐藏配置渲染、链接、Git 预案和索引同步。测试只操作工具包 local 下的临时 Git 仓库，不访问数据库或业务远端。

@@ -7,8 +7,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Files,
 
-    [Parameter(Mandatory = $true)]
     [string]$CommitMessage,
+
+    [string]$CommitMessageFile,
 
     [ValidateSet('Publish', 'VerifyConflict', 'CompleteConflict')]
     [string]$Mode = 'Publish',
@@ -16,6 +17,7 @@ param(
     [string]$CompileModules,
     [string]$MavenSettings,
     [string]$ManualAcceptanceFile,
+    [string]$BriefPath,
     [switch]$ConfirmConflictCompletion,
     [switch]$UseHumanCompletionApproval,
     [switch]$Preview
@@ -25,10 +27,9 @@ $ErrorActionPreference = 'Stop'
 $script:LastGitExitCode = 0
 $script:resolvedProjectPath = $null
 $script:approvedLocalGitHookBypass = $false
-$artifactRoot = Join-Path (Split-Path -Parent $PSScriptRoot) 'artifacts\\merge-verification'
-$workspaceRoot = Split-Path -Parent $PSScriptRoot
-$localGitHookBypassApprovalPath = Join-Path $workspaceRoot 'governance\\agent-guard\\local-git-hook-bypass-approval.json'
-$localGitHookBypassHooksPath = Join-Path $workspaceRoot 'governance\\agent-guard\\empty-git-hooks'
+$legacyArtifactRoot = '__WORKSPACE_ROOT__\artifacts\merge-verification'
+$localGitHookBypassApprovalPath = '__WORKSPACE_ROOT__\governance\agent-guard\local-git-hook-bypass-approval.json'
+$localGitHookBypassHooksPath = '__WORKSPACE_ROOT__\governance\agent-guard\empty-git-hooks'
 
 function Normalize-PathString {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -98,9 +99,36 @@ function Test-MergeInProgress {
 function Normalize-RepoRelativePath {
     param([Parameter(Mandatory = $true)][string]$Path)
     if ([string]::IsNullOrWhiteSpace($Path) -or [System.IO.Path]::IsPathRooted($Path)) { throw "-Files must use repository-relative paths: $Path" }
-    $normalized = $Path.Replace('\\', '/').TrimStart('./')
+    $normalized = $Path.Replace('\', '/').TrimStart('./')
     if ($normalized -eq '' -or $normalized -match '(^|/)\.\.(/|$)') { throw "-Files contains an unsafe repository-relative path: $Path" }
     $normalized
+}
+
+function Resolve-ProjectPath {
+    param([Parameter(Mandatory = $true)][string]$Path, [string]$Description = 'Path')
+    $resolved = if ([System.IO.Path]::IsPathRooted($Path)) {
+        Normalize-PathString $Path
+    }
+    else {
+        Normalize-PathString (Join-Path $script:resolvedProjectPath $Path)
+    }
+    if (-not (Test-Path -LiteralPath $resolved)) { throw "$Description not found: $resolved" }
+    $resolved
+}
+
+function Resolve-CommitMessage {
+    if (-not [string]::IsNullOrWhiteSpace($CommitMessage) -and -not [string]::IsNullOrWhiteSpace($CommitMessageFile)) {
+        throw 'Specify either -CommitMessage or -CommitMessageFile, not both.'
+    }
+    if (-not [string]::IsNullOrWhiteSpace($CommitMessageFile)) {
+        $messagePath = Resolve-ProjectPath -Path $CommitMessageFile -Description 'Commit message file'
+        $message = [System.IO.File]::ReadAllText($messagePath).TrimEnd([char[]]"`r`n")
+    }
+    else {
+        $message = $CommitMessage
+    }
+    if ([string]::IsNullOrWhiteSpace($message)) { throw 'Specify a non-empty -CommitMessage or -CommitMessageFile.' }
+    $message
 }
 
 function Get-ChangedPaths {
@@ -109,7 +137,7 @@ function Get-ChangedPaths {
         $line = [string]$lineObject
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
         if ($line.Length -lt 4) { throw "Unable to safely parse git status output: $line" }
-        $path = $line.Substring(3).Replace('\\', '/')
+        $path = $line.Substring(3).Replace('\', '/')
         if ($path -match ' -> ') { throw "Renamed files require manual handling: $line" }
         $paths.Add($path)
     }
@@ -155,14 +183,83 @@ function Test-RefExists {
 
 function Test-HeadMatchesCommitMessage {
     param([Parameter(Mandatory = $true)][string]$ExpectedMessage)
-    (((Invoke-Git @('log', '-1', '--pretty=%B')) -join [Environment]::NewLine).Trim() -eq $ExpectedMessage.Trim())
+    # Do not let the caller's OEM console code page decide whether a UTF-8 Git
+    # commit message matches. This is deliberately separate from Invoke-Git:
+    # normal Git commands still return PowerShell lines, while this comparison
+    # needs the exact UTF-8 text payload.
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = 'git'
+    $startInfo.Arguments = "-c safe.directory=* -C `"$script:resolvedProjectPath`" log -1 --pretty=%B --encoding=UTF-8"
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.StandardOutputEncoding = New-Object System.Text.UTF8Encoding($false)
+    $startInfo.StandardErrorEncoding = New-Object System.Text.UTF8Encoding($false)
+
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    [void]$process.Start()
+    $outputTask = $process.StandardOutput.ReadToEndAsync()
+    $errorTask = $process.StandardError.ReadToEndAsync()
+    $process.WaitForExit()
+    $output = $outputTask.GetAwaiter().GetResult()
+    $error = $errorTask.GetAwaiter().GetResult()
+    if ($process.ExitCode -ne 0) {
+        throw "git log -1 --pretty=%B failed.$([Environment]::NewLine)$($error.Trim())"
+    }
+
+    # Git writes LF while a message file on Windows may use CRLF. Line ending
+    # representation must not affect resume detection; message content must.
+    $actual = ($output -replace "`r`n?", "`n").Trim()
+    $expected = ($ExpectedMessage -replace "`r`n?", "`n").Trim()
+    $actual -eq $expected
 }
 
 function Get-ActiveMergePointerPath {
+    $legacy = Join-Path (Get-MergeArtifactRepositoryPath -Legacy) 'active-merge.json'
+    if ($Mode -ne 'Publish' -and (Test-Path -LiteralPath $legacy)) { return $legacy }
     Join-Path (Get-MergeArtifactRepositoryPath) 'active-merge.json'
 }
 
+function Resolve-RequirementRuntimeRoot {
+    $briefsRoot = Normalize-PathString (Join-Path $PSScriptRoot '..\briefs')
+    if ($BriefPath) {
+        $candidate = Normalize-PathString $BriefPath
+    }
+    else {
+        $candidates = @()
+        $index = Join-Path $briefsRoot 'WORKTREE-INDEX.md'
+        if (Test-Path -LiteralPath $index) {
+            foreach ($line in [System.IO.File]::ReadAllLines($index)) {
+                if ($line -notmatch '^\s*\|') { continue }
+                $cells = $line.Split('|')
+                $matchesProject = @($cells | Where-Object { $_.Trim().Trim([char]96).TrimEnd('\','/').Equals($script:resolvedProjectPath, [System.StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+                if ($matchesProject -and $line -match 'briefs/(backend|frontend|cross)/([a-z0-9]+(?:-[a-z0-9]+)*)/') {
+                    $candidates += Join-Path $briefsRoot "$($Matches[1])\$($Matches[2])"
+                }
+            }
+        }
+        if (-not $candidates.Count) {
+            $name = Split-Path -Leaf $script:resolvedProjectPath
+            foreach ($type in @('backend','frontend','cross')) {
+                $path = Join-Path $briefsRoot "$type\$name"
+                if (Test-Path -LiteralPath (Join-Path $path 'README.md')) { $candidates += $path }
+            }
+        }
+        $candidates = @($candidates | Sort-Object -Unique)
+        if ($candidates.Count -ne 1) { throw 'Cannot uniquely locate the requirement directory. Supply -BriefPath pointing to an approved existing requirement directory; do not create one automatically.' }
+        $candidate = Normalize-PathString $candidates[0]
+    }
+    $relative = [System.IO.Path]::GetRelativePath($briefsRoot, $candidate).Replace('\','/')
+    if ($relative -notmatch '^(backend|frontend|cross)/[a-z0-9]+(?:-[a-z0-9]+)*$' -or -not (Test-Path -LiteralPath (Join-Path $candidate 'README.md'))) {
+        throw 'BriefPath must be an existing approved requirement root under briefs/backend, briefs/frontend, or briefs/cross, with README.md.'
+    }
+    Join-Path $candidate 'runtime\merge-verification'
+}
+
 function Get-MergeArtifactRepositoryPath {
+    param([switch]$Legacy)
     $repoName = Split-Path -Leaf $script:resolvedProjectPath
     $commonDir = ((Invoke-Git @('rev-parse', '--git-common-dir')) -join '').Trim()
     if (-not [System.IO.Path]::IsPathRooted($commonDir)) { $commonDir = Join-Path $script:resolvedProjectPath $commonDir }
@@ -171,7 +268,8 @@ function Get-MergeArtifactRepositoryPath {
     try { $hash = $sha256.ComputeHash($bytes) }
     finally { $sha256.Dispose() }
     $suffix = ([System.BitConverter]::ToString($hash) -replace '-', '').Substring(0, 12).ToLowerInvariant()
-    Join-Path $artifactRoot "$(Get-SafeArtifactName $repoName)-$suffix"
+    $root = if ($Legacy) { $legacyArtifactRoot } else { Resolve-RequirementRuntimeRoot }
+    Join-Path $root "$(Get-SafeArtifactName $repoName)-$suffix"
 }
 
 function Write-JsonFile {
@@ -190,6 +288,23 @@ function Read-JsonFile {
 function Get-SafeArtifactName {
     param([Parameter(Mandatory = $true)][string]$Value)
     ($Value -replace '[^A-Za-z0-9._-]', '_')
+}
+
+function Get-ArtifactFileToken {
+    param([Parameter(Mandatory = $true)][string]$RepoPath)
+    # Artifact paths live below several fixed directories. Keeping the complete
+    # repository-relative path in the filename can exceed Windows MAX_PATH for
+    # deep Java modules. The original path remains in state.json; use a stable
+    # short display name plus a path hash for collision resistance instead.
+    $displayName = Get-SafeArtifactName ([System.IO.Path]::GetFileName($RepoPath))
+    if ([string]::IsNullOrWhiteSpace($displayName)) { $displayName = 'file' }
+    if ($displayName.Length -gt 72) { $displayName = $displayName.Substring(0, 72) }
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($RepoPath.Replace('\', '/').ToLowerInvariant())
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try { $hash = $sha256.ComputeHash($bytes) }
+    finally { $sha256.Dispose() }
+    $suffix = ([System.BitConverter]::ToString($hash) -replace '-', '').Substring(0, 16).ToLowerInvariant()
+    "$displayName-$suffix"
 }
 
 function Save-GitStageContent {
@@ -248,14 +363,21 @@ function Get-ConflictClassification {
         [Parameter(Mandatory = $true)][string]$TheirsPath
     )
     # A is deliberately conservative. It is allowed only when neither side
-    # removes/replaces any line from the common base: both changes are pure
-    # additions relative to the common input. This also handles zdiff3 blocks
-    # whose base section contains unchanged surrounding context.
+    # removes/replaces common base content and their added line multisets do
+    # not overlap. Overlap is semantically ambiguous: a single retained line
+    # may be the correct deduplication (for example an identical Java import),
+    # while duplicate lines can be meaningful in other files. Route it to B
+    # instead of requiring a duplicated line merely to satisfy a multiset check.
     $base = Get-LineMultiset $BasePath
     $ours = Get-LineMultiset $OursPath
     $theirs = Get-LineMultiset $TheirsPath
     foreach ($line in $base.Keys) {
         if (([int]$ours[$line] -lt [int]$base[$line]) -or ([int]$theirs[$line] -lt [int]$base[$line])) { return 'B' }
+    }
+    $oursAdditions = Get-MultisetDifference $base $ours
+    $theirsAdditions = Get-MultisetDifference $base $theirs
+    foreach ($line in $oursAdditions.Keys) {
+        if ($theirsAdditions.ContainsKey($line)) { return 'B' }
     }
     'A'
 }
@@ -276,7 +398,7 @@ function New-MergeCapture {
     New-Item -ItemType Directory -Force -Path $inputPath | Out-Null
     $files = @()
     foreach ($path in $conflicts) {
-        $name = Get-SafeArtifactName $path
+        $name = Get-ArtifactFileToken $path
         $base = Join-Path $inputPath "$name.base"
         $ours = Join-Path $inputPath "$name.ours"
         $theirs = Join-Path $inputPath "$name.theirs"
@@ -292,6 +414,7 @@ function New-MergeCapture {
         sourceCommit = ((Invoke-Git @('rev-parse', $SourceBranch)) -join '').Trim(); targetCommitBeforeMerge = ((Invoke-Git @('rev-parse', 'HEAD')) -join '').Trim()
         mergeHead = ((Invoke-Git @('rev-parse', 'MERGE_HEAD')) -join '').Trim(); createdAt = (Get-Date).ToString('o'); artifactPath = $artifactPath
         files = $files; verification = [pscustomobject]@{ status = 'pending'; checkedAt = $null; compileStatus = 'not-started'; reportPath = $null }
+        localGitHookBypass = $null; completion = $null
     }
     $statePath = Join-Path $artifactPath 'state.json'
     Write-JsonFile -Value $state -Path $statePath
@@ -312,18 +435,41 @@ function Save-MergeState {
     Write-JsonFile -Value $State -Path (Join-Path $State.artifactPath 'state.json')
 }
 
+function Set-MergeStateProperty {
+    param(
+        [Parameter(Mandatory = $true)]$State,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)]$Value
+    )
+    if ($null -ne $State.PSObject.Properties[$Name]) {
+        $State.$Name = $Value
+    }
+    else {
+        $State | Add-Member -NotePropertyName $Name -NotePropertyValue $Value
+    }
+}
+
 function Invoke-CompileVerification {
     param([Parameter(Mandatory = $true)][string[]]$Modules, [string]$Settings)
-    $arguments = @()
-    if (-not [string]::IsNullOrWhiteSpace($Settings)) { $arguments += @('-s', $Settings) }
-    $arguments += @('-pl', ($Modules -join ','), '-am', 'compile')
+    $mavenArguments = @()
+    if (-not [string]::IsNullOrWhiteSpace($Settings)) {
+        $settingsPath = Resolve-ProjectPath -Path $Settings -Description 'Maven settings file'
+        $mavenArguments += @('-s', $settingsPath)
+    }
+    $mavenArguments += @('-pl', ($Modules -join ','), '-am', 'compile')
     $oldEap = $ErrorActionPreference
     $hasNativePreference = Test-Path variable:\PSNativeCommandUseErrorActionPreference
     if ($hasNativePreference) { $oldNativePreference = $PSNativeCommandUseErrorActionPreference; $PSNativeCommandUseErrorActionPreference = $false }
     try {
         $ErrorActionPreference = 'Continue'
-        $output = & mvn @arguments 2>&1
-        $exitCode = $LASTEXITCODE
+        Push-Location -LiteralPath $script:resolvedProjectPath
+        try {
+            $output = & mvn @mavenArguments 2>&1
+            $exitCode = $LASTEXITCODE
+        }
+        finally {
+            Pop-Location
+        }
     }
     finally {
         $ErrorActionPreference = $oldEap
@@ -336,7 +482,7 @@ function New-ManualAcceptanceTemplate {
     param([Parameter(Mandatory = $true)]$State)
     $templatePath = Join-Path $State.artifactPath 'manual-acceptance.md'
     if (Test-Path -LiteralPath $templatePath) { return $templatePath }
-    $lines = @('# Manual acceptance for B-class merge conflicts', '', '> Fill every REQUIRED item. This document records a human decision; it does not replace targeted validation.', '')
+    $lines = @('# Optional human decision record for B-class merge conflicts', '', '> This record is optional. If you choose to retain it, fill every REQUIRED item. It records a human decision; it does not replace targeted validation.', '')
     foreach ($file in @($State.files | Where-Object { $_.classification -eq 'B' })) {
         $lines += @("## $($file.path)", '', '### Target-side behavior retained', '<!-- REQUIRED: describe -->', '', '### Source-side behavior retained', '<!-- REQUIRED: describe -->', '', '### Resolution and intentional trade-off', '<!-- REQUIRED: describe -->', '', '### Impacted callers', '<!-- REQUIRED: describe -->', '', '### Targeted validation', '<!-- REQUIRED: test class, build, or environment scenario -->', '')
     }
@@ -367,7 +513,9 @@ function Invoke-ConflictVerification {
     if (@(Get-ConflictFiles).Count -gt 0) { throw 'Unresolved conflict entries remain. Resolve and git add every conflict file before verification.' }
 
     Invoke-Git @('diff', '--check') | Out-Null
-    Invoke-Git @('grep', '-n', '-E', '^(<<<<<<<|=======|>>>>>>>|\|\|\|\|\|\|\|)', '--') -AllowFailure | Out-Null
+    Invoke-Git @('diff', '--cached', '--check') | Out-Null
+    $markerArguments = @('grep', '-n', '-E', '^(<<<<<<<|=======|>>>>>>>|\|\|\|\|\|\|\|)', '--') + @($state.files | ForEach-Object { $_.path })
+    Invoke-Git -Arguments $markerArguments -AllowFailure | Out-Null
     if ($script:LastGitExitCode -eq 0) { throw 'Conflict marker text remains in the worktree. Remove it before verification.' }
 
     $report = New-Object System.Collections.Generic.List[string]
@@ -382,15 +530,15 @@ function Invoke-ConflictVerification {
         $report.Add("## $($file.path) ($($file.classification))")
         if ($file.classification -eq 'B') {
             $hasB = $true
-            $report.Add('Manual acceptance required: both sides changed shared base content, or the recorded conflict could not be safely classified as A.')
+            $report.Add('Both sides changed shared base content, or the recorded conflict could not be safely classified as A. A human decision record is optional supporting evidence.')
             $report.Add("- base: $($file.base)")
             $report.Add("- ours: $($file.ours)")
             $report.Add("- theirs: $($file.theirs)")
             $report.Add("- conflict input: $($file.conflicted)")
-            $report.Add('- Record which side behavior is retained, which is intentionally changed, affected callers, and targeted verification before completion.')
+            $report.Add('- The frozen inputs support review; add a manual acceptance record when the decision needs later explanation.')
             continue
         }
-        $mergedPath = Join-Path $state.artifactPath ('resolved-' + (Get-SafeArtifactName $file.path))
+        $mergedPath = Join-Path $state.artifactPath ('resolved-' + (Get-ArtifactFileToken $file.path))
         Copy-Item -LiteralPath (Join-Path $script:resolvedProjectPath $file.path) -Destination $mergedPath -Force
         $base = Get-LineMultiset $file.base; $ours = Get-LineMultiset $file.ours; $theirs = Get-LineMultiset $file.theirs; $merged = Get-LineMultiset $mergedPath
         $checks = @(
@@ -410,17 +558,16 @@ function Invoke-ConflictVerification {
     # completion eligibility cannot depend on loop-local state.
     $hasB = @($state.files | Where-Object { $_.classification -eq 'B' }).Count -gt 0
     $manualAcceptancePath = $null
-    $manualAccepted = $false
     if ($hasB) {
         $templatePath = New-ManualAcceptanceTemplate $state
         $report.Add('')
         $report.Add('## Manual acceptance')
         if ([string]::IsNullOrWhiteSpace($ManualAcceptanceFile)) {
-            $report.Add("PENDING: fill the generated template and rerun with -ManualAcceptanceFile $templatePath")
+            $report.Add("Optional: a human decision record may be added at $templatePath. It does not block completion when compile and merge checks pass.")
         }
         else {
             $manualAcceptancePath = Normalize-PathString $ManualAcceptanceFile
-            $manualAccepted = Test-ManualAcceptance -State $state -Path $manualAcceptancePath
+            Test-ManualAcceptance -State $state -Path $manualAcceptancePath | Out-Null
             $report.Add("Human acceptance record supplied: $manualAcceptancePath")
         }
     }
@@ -447,40 +594,70 @@ function Invoke-ConflictVerification {
             $report.Add("- Log: $compileLog")
         }
     }
-    $status = if (-not $allAPassed) { 'failed' } elseif ($hasB -and -not $manualAccepted) { 'manual-acceptance-required' } elseif ($compileStatus -eq 'required-but-not-run') { 'compile-required' } elseif ($compileStatus -eq 'failed') { 'failed' } else { 'passed' }
+    $status = if (-not $allAPassed) { 'failed' } elseif ($compileStatus -eq 'required-but-not-run') { 'compile-required' } elseif ($compileStatus -eq 'failed') { 'failed' } else { 'passed' }
     $report.Add('')
     $report.Add("## Result: $status")
-    if ($status -eq 'passed' -and $hasB) { $report.Add('A-class multiset checks passed; B-class decisions have a completed human acceptance record; required compilation passed.') }
+    if ($status -eq 'passed' -and $hasB) { $report.Add('B-class conflicts were resolved and passed merge checks; any supplied human acceptance record is retained as supporting evidence; required compilation passed.') }
     elseif ($status -eq 'passed') { $report.Add('All captured conflicts are conservative A cases, four-way multiset checks passed, and required compilation passed.') }
     else { $report.Add('Do not commit this merge through CompleteConflict until the blocking condition is resolved and verification is rerun.') }
     $reportPath = Join-Path $state.artifactPath 'report.md'
     $report | Set-Content -LiteralPath $reportPath -Encoding utf8
-    $state.verification = [pscustomobject]@{ status = $status; checkedAt = (Get-Date).ToString('o'); compileStatus = $compileStatus; reportPath = $reportPath; manualAcceptancePath = $manualAcceptancePath }
+    $indexTree = ((Invoke-Git @('write-tree')) -join '').Trim()
+    $state.verification = [pscustomobject]@{ status = $status; checkedAt = (Get-Date).ToString('o'); compileStatus = $compileStatus; reportPath = $reportPath; manualAcceptancePath = $manualAcceptancePath; indexTree = $indexTree }
     Save-MergeState $state
     Write-Host "Merge verification result: $status"
     Write-Host "Report: $reportPath"
-    if ($status -ne 'passed') { throw "Merge verification is $status. Resolve the report findings or complete required human acceptance before committing." }
+    if ($status -ne 'passed') { throw "Merge verification is $status. Resolve the report findings and rerun VerifyConflict before committing." }
 }
 
 function Complete-VerifiedConflict {
     if (-not $ConfirmConflictCompletion) { throw 'CompleteConflict requires -ConfirmConflictCompletion after a human has reviewed the verification report.' }
     $state = Get-ActiveMergeState
-    if (-not (Test-MergeInProgress)) { throw 'No captured merge is in progress.' }
     if ($state.verification.status -ne 'passed') { throw "Merge verification status is '$($state.verification.status)'; completion is blocked." }
-    if (@(Get-ConflictFiles).Count) { throw 'Unresolved conflict entries remain.' }
-    Invoke-Git @('diff', '--check') | Out-Null
-    $script:approvedLocalGitHookBypass = Test-ApprovedLocalGitHookBypass
-    if ($script:approvedLocalGitHookBypass) {
-        Add-Content -LiteralPath $state.verification.reportPath -Value "`n## Local Git hook bypass`n- Human approval: $localGitHookBypassApprovalPath`n- Scope: commit and push in CompleteConflict only`n- Remote CI and script verification: not bypassed" -Encoding utf8
-        $state.localGitHookBypass = [pscustomobject]@{ approved = $true; approvalPath = $localGitHookBypassApprovalPath; scope = 'publish-to-branch.complete-conflict'; usedAt = (Get-Date).ToString('o') }
-        Save-MergeState $state
+    $resumingPush = $null -ne $state.completion -and $state.completion.status -eq 'committed-pending-push'
+    if ($resumingPush) {
+        if ((Get-CurrentBranch) -ne $state.targetBranch) { throw "Pending target push must resume from '$($state.targetBranch)'." }
+        $currentCommit = ((Invoke-Git @('rev-parse', 'HEAD')) -join '').Trim()
+        if ($currentCommit -ne $state.completion.commit) { throw 'Current HEAD does not match the recorded pending merge commit. Request human direction.' }
     }
+    else {
+        if (-not (Test-MergeInProgress)) { throw 'No captured merge is in progress.' }
+        if (@(Get-ConflictFiles).Count) { throw 'Unresolved conflict entries remain.' }
+        Invoke-Git @('diff', '--check') | Out-Null
+        Invoke-Git @('diff', '--cached', '--check') | Out-Null
+        Invoke-Git @('diff', '--quiet') -AllowFailure | Out-Null
+        if ($script:LastGitExitCode -ne 0) { throw 'Working tree changed after verification. Stage or discard the changes, then rerun VerifyConflict.' }
+        $currentIndexTree = ((Invoke-Git @('write-tree')) -join '').Trim()
+        if ([string]::IsNullOrWhiteSpace($state.verification.indexTree) -or $currentIndexTree -ne $state.verification.indexTree) {
+            throw 'Staged merge result changed after verification. Rerun VerifyConflict before completion.'
+        }
+    }
+    $script:approvedLocalGitHookBypass = Test-ApprovedLocalGitHookBypass
+    $commitCreated = $resumingPush
     try {
-        Invoke-Git @('commit', '--no-edit') | Out-Null
+        if (-not $resumingPush) {
+            Invoke-Git @('commit', '--no-edit') | Out-Null
+            Set-MergeStateProperty -State $state -Name 'completion' -Value ([pscustomobject]@{ status = 'committed-pending-push'; commit = ((Invoke-Git @('rev-parse', 'HEAD')) -join '').Trim(); committedAt = (Get-Date).ToString('o') })
+            Save-MergeState $state
+            $commitCreated = $true
+        }
         Invoke-Git @('push', 'origin', $state.targetBranch) | Out-Null
     }
-    catch { throw "Merged locally but target push failed. Stay on '$($state.targetBranch)' and request human direction.$([Environment]::NewLine)$($_.Exception.Message)" }
+    catch {
+        if ($commitCreated) { throw "Merge commit exists locally but target push failed. Stay on '$($state.targetBranch)' and rerun CompleteConflict to retry only the push after human direction.$([Environment]::NewLine)$($_.Exception.Message)" }
+        throw "Merge commit failed. The verified merge state is retained on '$($state.targetBranch)' for correction or retry.$([Environment]::NewLine)$($_.Exception.Message)"
+    }
     finally { $script:approvedLocalGitHookBypass = $false }
+    Set-MergeStateProperty -State $state -Name 'completion' -Value ([pscustomobject]@{ status = 'pushed'; commit = ((Invoke-Git @('rev-parse', 'HEAD')) -join '').Trim(); pushedAt = (Get-Date).ToString('o') })
+    if ($UseHumanCompletionApproval) {
+        Set-MergeStateProperty -State $state -Name 'localGitHookBypass' -Value ([pscustomobject]@{
+            approved = $true
+            scope = 'publish-to-branch.complete-conflict'
+            usedAt = (Get-Date).ToString('o')
+        })
+        Add-Content -LiteralPath $state.verification.reportPath -Value "`n## Local Git hook bypass`n- Human authorization: human-created approval file $localGitHookBypassApprovalPath, plus -UseHumanCompletionApproval for this completion`n- Scope: commit and push in CompleteConflict only`n- Remote CI and script verification: not bypassed" -Encoding utf8
+        Save-MergeState $state
+    }
     $targetCommit = ((Invoke-Git @('rev-parse', 'HEAD')) -join '').Trim()
     Invoke-Git @('switch', $state.sourceBranch) | Out-Null
     Remove-Item -LiteralPath (Get-ActiveMergePointerPath) -Force -ErrorAction SilentlyContinue
@@ -495,6 +672,7 @@ $script:resolvedProjectPath = Normalize-PathString $ProjectPath
 if (-not (Test-Path -LiteralPath $script:resolvedProjectPath)) { throw "Project path not found: $script:resolvedProjectPath" }
 $inside = ((Invoke-Git @('rev-parse', '--is-inside-work-tree')) -join '').Trim()
 if ($inside -ne 'true') { throw "Project path is not a Git worktree: $script:resolvedProjectPath" }
+$CommitMessage = Resolve-CommitMessage
 if ($UseHumanCompletionApproval -and $Mode -ne 'CompleteConflict') { throw '-UseHumanCompletionApproval is allowed only with -Mode CompleteConflict.' }
 Invoke-Git @('check-ref-format', '--branch', $TargetBranch) -AllowFailure | Out-Null
 if ($script:LastGitExitCode -ne 0) { throw "Invalid target branch name: $TargetBranch" }
@@ -514,13 +692,20 @@ else { Assert-ExactChangedFiles $expectedFiles }
 Assert-TargetNotCheckedOutElsewhere $TargetBranch
 $localTargetExists = Test-RefExists "refs/heads/$TargetBranch"; $remoteTargetExists = Test-RefExists "refs/remotes/origin/$TargetBranch"
 
+# Resolve the output owner in the read-only plan, before any publishing mutation.
+$requirementRuntimeRoot = Resolve-RequirementRuntimeRoot
+
 Write-Host 'Publish-to-branch plan'
 Write-Host "  project: $script:resolvedProjectPath"
 Write-Host "  source branch: $sourceBranch"
 Write-Host "  target branch: $TargetBranch"
 Write-Host "  source commit already exists: $resumeFromExistingSourceCommit"
-Write-Host '  conflict behavior: capture Git stages to artifacts, stop for manual resolution, verify, then explicitly complete'
-if ($Preview) { exit 0 }
+Write-Host '  conflict behavior: capture Git stages to requirement runtime, stop for manual resolution, verify, then explicitly complete'
+Write-Host "  conflict artifact root: $requirementRuntimeRoot"
+if ($Preview) {
+    Write-Host '  mode: preview (read-only; no commit, push, fetch, switch, merge, or artifact write)'
+    exit 0
+}
 
 if (-not $remoteTargetExists) { Invoke-Git @('fetch', 'origin', $TargetBranch); $remoteTargetExists = Test-RefExists "refs/remotes/origin/$TargetBranch" }
 if (-not $remoteTargetExists) { throw "Target branch '$TargetBranch' does not exist on origin. It will not be created automatically." }
