@@ -11,6 +11,9 @@ $ErrorActionPreference = "Stop"
 if ($PSVersionTable.PSVersion.Major -lt 7) {
     throw 'PowerShell 7 is required. Run this installer with pwsh.exe.'
 }
+& (Join-Path $PSScriptRoot 'check-environment.ps1')
+if ($LASTEXITCODE -ne 0) { throw 'Environment check failed. No workspace files were written.' }
+$version = ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'VERSION'))).Trim()
 $source = Join-Path $PSScriptRoot "templates\workspace"
 $optionsRoot = Join-Path $PSScriptRoot "templates\options"
 $destination = [System.IO.Path]::GetFullPath($WorkspaceRoot)
@@ -28,6 +31,7 @@ if (Test-Path -LiteralPath $destination) {
 }
 
 Get-ChildItem -Force -LiteralPath $source | Copy-Item -Destination $destination -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination (Join-Path $destination 'LICENSE')
 
 if ($IncludeDbAnalysis) {
     $dbOption = Join-Path $optionsRoot "db-analysis"
@@ -65,6 +69,8 @@ foreach ($file in $textFiles) {
     Set-Content -NoNewline -Encoding UTF8 -LiteralPath $file.FullName -Value $content
 }
 
+$manifest = [ordered]@{ schemaVersion = 1; frameworkVersion = $version; installedAt = (Get-Date).ToUniversalTime().ToString('o'); options = @{ dbAnalysis = [bool]$IncludeDbAnalysis; yunxiao = [bool]$IncludeYunxiao } }
+$manifest | ConvertTo-Json -Depth 4 | Set-Content -Encoding UTF8 -LiteralPath (Join-Path $destination 'workstation-install.json')
 Write-Host "Multi-project workstation installed at: $destination"
 Write-Host "Workspace-local Codex and Claude hook templates were installed under .codex and .claude."
 if ($IncludeDbAnalysis) {

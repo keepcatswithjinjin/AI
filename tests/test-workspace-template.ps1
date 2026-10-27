@@ -30,6 +30,9 @@ function Invoke-TestGit([string]$Repository, [string[]]$Arguments) {
 }
 
 function Assert-Instance([string]$Root, [bool]$Optional) {
+    $manifest = [IO.File]::ReadAllText((Join-Path $Root 'workstation-install.json')) | ConvertFrom-Json
+    Assert-True ($manifest.frameworkVersion -eq ([IO.File]::ReadAllText((Join-Path $toolkitRoot 'VERSION'))).Trim()) 'Installation version mismatch.'
+    Assert-True ($manifest.options.dbAnalysis -eq $Optional -and $manifest.options.yunxiao -eq $Optional) 'Installation options mismatch.'
     foreach ($relative in @('AGENTS.md','CLAUDE.md','STRUCTURE.md','.gitignore','projects/README.md','knowledge/README.md','tmp/README.md','plans/README.md','rules/execution-entry.md','rules/brief-readme-template.md','rules/verification.md','scripts/sync-workstation-state.ps1','.codex/config.toml','.claude/settings.local.json')) {
         Assert-True (Test-Path -LiteralPath (Join-Path $Root $relative) -PathType Leaf) "Missing template: $relative"
     }
@@ -43,6 +46,7 @@ function Assert-Instance([string]$Root, [bool]$Optional) {
         $body = [IO.File]::ReadAllText($file.FullName)
         Assert-True (!$body.Contains('__WORKSPACE_ROOT__')) "Unrendered root: $($file.FullName)"
         Assert-True ($body -notmatch 'D:[\\/]Col(?:[\\/]|\b)') "Personal root leaked: $($file.FullName)"
+        Assert-True ($body -notmatch 'C:[\\/]Users[\\/]wangjian(?:[\\/]|\b)') "Personal user path leaked: $($file.FullName)"
         if ($file.Extension -eq '.json') { $null = $body | ConvertFrom-Json }
         if ($file.Extension -eq '.ps1') {
             $tokens = $null; $parseErrors = $null
@@ -169,6 +173,97 @@ try {
     Assert-True ((Invoke-TestGit $publishWorktree @('branch','--show-current')) -eq ('feature/' + $publishName)) 'Conflict completion failed to restore source.'
     Assert-True (!(Test-Path -LiteralPath $pointers[0].FullName)) 'Completion left an active merge pointer.'
     Write-Output 'PASS: publish read-only preview, UTF-8 message, local push, runtime conflict capture, verification and staged-tree tamper rejection'
+    # Multi-location and project baselines use only disposable local remotes.
+    $multiName = 'multi-location-smoke'; $multiKey = 'cross:' + $multiName
+    Write-Fixture $index (([IO.File]::ReadAllText($index)).Replace('## cross（跨端）', ('## cross（跨端）' + "`n`n" + '| `' + $multiName + '` | `briefs/cross/' + $multiName + '/` |')))
+    # Some older templates label cross differently; ensure one exact fixture entry.
+    if (!([IO.File]::ReadAllText($index)).Contains('| `' + $multiName + '` |')) {
+        Write-Fixture $index (([IO.File]::ReadAllText($index)) + "`n" + '| `' + $multiName + '` | `briefs/cross/' + $multiName + '/` |' + "`n")
+    }
+    $multiBrief = Join-Path $basic ('briefs/cross/' + $multiName)
+    foreach ($file in @('README.md','spec/design.md','spec/api-contract.md','spec/backend-plan.md','spec/frontend-plan.md')) { Write-Fixture (Join-Path $multiBrief $file) '# Synthetic fixture' }
+    $null = Invoke-TestScript $stateScript @('-Action','Register','-RequirementKey',$multiKey)
+    $null = Invoke-TestScript $stateScript @('-Action','DesignReady','-RequirementKey',$multiKey)
+    $locationIndex = Join-Path $basic 'briefs/WORKTREE-INDEX.md'
+    $legacyIndex = [IO.File]::ReadAllText($locationIndex)
+    $registryPath = Join-Path $basic 'rules/worktree.md'
+    $locations = @()
+    $branches = @('main','master','develop','trunk')
+    for ($i = 0; $i -lt 4; $i++) {
+        $projectKey = 'fixture-' + $i
+        $role = if ($i -lt 2) { 'backend' } else { 'frontend' }
+        $baseline = $branches[$i]
+        $fixtureRepo = Join-Path $basic ('projects/' + $projectKey)
+        $fixtureRemote = Join-Path $testRoot ($projectKey + '.git')
+        [void][IO.Directory]::CreateDirectory($fixtureRepo)
+        $null = Invoke-TestGit $fixtureRepo @('init',('--initial-branch=' + $baseline))
+        $null = Invoke-TestGit $fixtureRepo @('config','user.name','Template Test')
+        $null = Invoke-TestGit $fixtureRepo @('config','user.email','template-test@example.invalid')
+        Write-Fixture (Join-Path $fixtureRepo 'seed.txt') "baseline`n"
+        $null = Invoke-TestGit $fixtureRepo @('add','seed.txt')
+        $null = Invoke-TestGit $fixtureRepo @('commit','-m','fixture')
+        $null = Invoke-TestGit $testRoot @('init','--bare',$fixtureRemote)
+        $null = Invoke-TestGit $fixtureRepo @('remote','add','upstream',$fixtureRemote)
+        $null = Invoke-TestGit $fixtureRepo @('push','upstream',$baseline)
+        $locationParent = Join-Path $basic ('worktrees/' + $projectKey + '-worktree')
+        $registryRow = '| `' + $projectKey + '` | `' + $fixtureRepo + '` | fixture | `' + $locationParent + '` | `' + $baseline + '` | `upstream` |'
+        Write-Fixture $registryPath (([IO.File]::ReadAllText($registryPath)) + "`n" + $registryRow + "`n")
+        $locationPath = Join-Path $locationParent $multiName
+        $id = $role + '-' + $projectKey
+        $creation = @('-ProjectKey',$projectKey,'-Name',$multiName,'-RequirementKey',$multiKey,'-Role',$role,'-LocationId',$id,'-LocationGroup','shared','-OutputFormat','Json')
+        $beforeIndex = [IO.File]::ReadAllText($locationIndex)
+        $previewMulti = (Invoke-TestScript $newScript ($creation + @('-Preview'))) | ConvertFrom-Json
+        Assert-True ($previewMulti.state.baseBranch -eq $baseline -and $previewMulti.state.remote -eq 'upstream') 'Project default baseline/remote ignored.'
+        Assert-True ([IO.File]::ReadAllText($locationIndex) -eq $beforeIndex -and !(Test-Path -LiteralPath $locationPath)) 'Preview mutated location state.'
+        $actualMulti = (Invoke-TestScript $newScript $creation) | ConvertFrom-Json
+        Assert-True ($actualMulti.outcome -eq 'succeeded') 'Multi-location creation failed.'
+        Assert-True (([IO.File]::ReadAllText($locationIndex)).StartsWith($legacyIndex)) 'Legacy rows were rewritten.'
+        $locations += [pscustomobject]@{ Path=$locationPath; Id=$id; Role=$role }
+        if ($i -eq 0) {
+            $null = Invoke-TestGit $fixtureRepo @('branch','alternate')
+            $offline = (Invoke-TestScript $newScript @('-ProjectKey',$projectKey,'-Name','offline-copy','-BaseBranch','alternate','-Remote','missing','-SkipBaseUpdate','-OutputFormat','Json')) | ConvertFrom-Json
+            Assert-True ($offline.outcome -eq 'succeeded' -and $offline.state.baseBranch -eq 'alternate') 'Offline explicit override ignored or unexpectedly required a remote.'
+            $null = Invoke-TestScript $removeScript @('-WorktreePath',$offline.state.worktreePath,'-Confirm','-OutputFormat','Json')
+            $oldRow = '| `legacy-project` | `' + $fixtureRepo + '` | old fixture | `' + $locationParent + '` |'
+            Write-Fixture $registryPath (([IO.File]::ReadAllText($registryPath)) + "`n" + $oldRow + "`n")
+            $null = Invoke-TestScript $newScript @('-ProjectKey','legacy-project','-Name','legacy-explicit','-SkipBaseUpdate','-Preview','-OutputFormat','Json') 1
+            $oldPreview = (Invoke-TestScript $newScript @('-ProjectKey','legacy-project','-Name','legacy-explicit','-BaseBranch',$baseline,'-SkipBaseUpdate','-Preview','-OutputFormat','Json')) | ConvertFrom-Json
+            Assert-True ($oldPreview.outcome -eq 'planned') 'Legacy registry explicit baseline is not compatible.'
+            $badBase = (Invoke-TestScript $newScript @('-ProjectKey',$projectKey,'-Name','missing-base','-BaseBranch','missing','-SkipBaseUpdate','-OutputFormat','Json') 1) | ConvertFrom-Json
+            Assert-True ($badBase.outcome -eq 'failed') 'Missing baseline silently fell back.'
+            Write-Fixture (Join-Path $fixtureRepo 'dirty.txt') 'must remain'
+            $blocked = (Invoke-TestScript $newScript @('-ProjectKey',$projectKey,'-Name','dirty-root','-OutputFormat','Json') 1) | ConvertFrom-Json
+            Assert-True ($blocked.outcome -eq 'failed' -and (Test-Path -LiteralPath (Join-Path $fixtureRepo 'dirty.txt'))) 'Dirty root was not preserved.'
+        }
+    }
+    # Deliberately ambiguous basename: only the v2 row identifies the right brief.
+    Write-Fixture (Join-Path $basic ('briefs/backend/' + $multiName + '/README.md')) '# Decoy fixture'
+    $previewFile = Join-Path $locations[1].Path 'seed.txt'
+    $previewOriginal = [IO.File]::ReadAllBytes($previewFile)
+    Write-Fixture (Join-Path $locations[1].Path 'seed.txt') "changed for preview`n"
+    $null = Invoke-TestScript $publisher @('-ProjectPath',$locations[1].Path,'-TargetBranch','integration-test','-Files','seed.txt','-CommitMessage','multi preview','-Preview')
+    [IO.File]::WriteAllBytes($previewFile, $previewOriginal)
+    $null = Invoke-TestScript $stateScript @('-Action','Developing','-RequirementKey',$multiKey)
+    $wrongCleanup = (Invoke-TestScript $removeScript @('-WorktreePath',$locations[0].Path,'-RequirementKey',$multiKey,'-Role','backend','-LocationId','wrong-id','-Preview','-OutputFormat','Json') 1) | ConvertFrom-Json
+    Assert-True ($wrongCleanup.outcome -eq 'failed' -and (Test-Path -LiteralPath $locations[0].Path)) 'Cleanup accepted wrong location.'
+    for ($i = 0; $i -lt $locations.Count; $i++) {
+        $location = $locations[$i]
+        $null = Invoke-TestScript $removeScript @('-WorktreePath',$location.Path,'-RequirementKey',$multiKey,'-Role',$location.Role,'-LocationId',$location.Id,'-Confirm','-OutputFormat','Json')
+        if ($i -lt 3) {
+            $notReleased = (Invoke-TestScript $stateScript @('-Action','Released','-RequirementKey',$multiKey)) | ConvertFrom-Json
+            Assert-True ($notReleased.outcome -eq 'unchanged' -and $notReleased.state.stage -eq 'developing') 'Released while other locations exist.'
+        }
+    }
+    $allReleased = (Invoke-TestScript $stateScript @('-Action','Released','-RequirementKey',$multiKey)) | ConvertFrom-Json
+    Assert-True ($allReleased.state.stage -eq 'released') 'All-location cleanup did not unlock Released.'
+    Assert-True (([IO.File]::ReadAllText($locationIndex)).StartsWith($legacyIndex)) 'Cleanup rewrote legacy rows.'
+    $mixedLegacy = (Invoke-TestScript $newScript @('-ProjectKey','project-api','-Name',$multiName,'-BaseBranch','master','-SkipBaseUpdate','-OutputFormat','Json')) | ConvertFrom-Json
+    $oldCrossRow = '| `' + $multiName + '` | `briefs/cross/' + $multiName + '/` | `' + $mixedLegacy.state.worktreePath + '` | `feature/' + $multiName + '` | — | — | legacy fixture |'
+    $crossSeparator = '|------|-------|--------------|----------|--------------|----------|------|'
+    Write-Fixture $locationIndex (([IO.File]::ReadAllText($locationIndex)).Replace($crossSeparator, ($crossSeparator + "`n" + $oldCrossRow)))
+    $mixedRemoved = (Invoke-TestScript $removeScript @('-WorktreePath',$mixedLegacy.state.worktreePath,'-RequirementKey',$multiKey,'-Role','backend','-Confirm','-OutputFormat','Json')) | ConvertFrom-Json
+    Assert-True ($mixedRemoved.outcome -eq 'succeeded') 'Legacy cleanup broke when v2 records exist for the same requirement.'
+    Write-Output 'PASS: four locations, project baselines/remotes, offline override, dirty-root preservation, exact cleanup, legacy compatibility and release gate'
     $passed = $true
 }
 finally {

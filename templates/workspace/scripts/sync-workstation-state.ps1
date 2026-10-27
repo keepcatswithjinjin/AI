@@ -5,6 +5,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'worktree-locations.ps1')
 
 function Complete-Result {
     param([string]$Outcome, [string]$Message, [object]$State = $null, [int]$ExitCode = 0)
@@ -40,9 +41,13 @@ function Get-RequiredFiles([string]$Type, [string]$BriefPath) {
 
 function Has-ActiveWorktree([string]$WorktreeIndexPath, [string]$Type, [string]$Name) {
     if (-not (Test-Path -LiteralPath $WorktreeIndexPath)) { return $false }
+    foreach ($row in (Read-MultiLocationIndex $WorktreeIndexPath).Rows) {
+        if ($row.Cells[0] -eq "${Type}:$Name" -and $row.Cells[4] -notin @('', '—') -and (Test-Path -LiteralPath $row.Cells[4])) { return $true }
+    }
     $section = ''
     foreach ($line in Get-Content -LiteralPath $WorktreeIndexPath -Encoding UTF8) {
         if ($line -match '^##\s+(cross|backend|frontend)\s*$') { $section = $Matches[1]; continue }
+        if ($line -match '^##\s+') { $section = ''; continue }
         if ($section -ne $Type -or $line -notmatch '^\|') { continue }
         $cells = @($line.Trim() -split '\|' | Select-Object -Skip 1 | Select-Object -SkipLast 1 | ForEach-Object { $_.Trim().Trim('`') })
         if ($cells.Count -lt 3 -or $cells[0] -ne $Name) { continue }

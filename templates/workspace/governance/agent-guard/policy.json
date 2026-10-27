@@ -5,6 +5,7 @@
     "__WORKSPACE_ROOT__/scripts/db-targets.json",
     "__WORKSPACE_ROOT__/scripts/db-analysis.cmd",
     "__WORKSPACE_ROOT__/scripts/db-analysis.ps1",
+    "__WORKSPACE_ROOT__/skills/db-analysis/**",
     "__WORKSPACE_ROOT__/scripts/publish-to-branch.cmd",
     "__WORKSPACE_ROOT__/scripts/publish-to-branch.ps1",
     "__WORKSPACE_ROOT__/.codex/config.toml",
@@ -16,8 +17,8 @@
   "database": {
     "deny_direct_clients": true,
     "approved_entrypoints": ["__WORKSPACE_ROOT__/scripts/db-analysis.cmd", "__WORKSPACE_ROOT__/scripts/db-analysis.ps1"],
-    "allowed_targets": ["example-readonly"],
-    "allowed_read_actions": ["ping", "grants", "databases", "schemas", "tables", "columns", "create", "query"],
+    "allowed_targets": ["example-readonly", "example-postgresql-readonly", "example-redis-test"],
+    "allowed_read_actions": ["ping", "grants", "databases", "schemas", "tables", "columns", "create", "query", "key-info", "get", "hget", "scan"],
     "deny_config_path_override": true,
     "blocked_sql_keywords": ["alter", "create", "delete", "drop", "grant", "insert", "replace", "revoke", "truncate", "update"],
     "sensitive_identifiers": ["password", "secret", "token", "private_key", "card_pan", "bank_account", "id_card", "passport"]

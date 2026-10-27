@@ -33,7 +33,7 @@
 | 数据库与测试 Redis（可选） | [脚本索引](scripts/INDEX.md)数据库段；安装后读取 `skills/db-analysis/SKILL.md`，以工具包现有只读边界为准 |
 | 云效任务、迭代、流水线（可选） | 安装后读取 `.codex/skills/yunxiao-workstation/SKILL.md`；未安装则报告未启用，不自行注册工具 |
 | 业务排查、配置或接口验证资料 | [业务资料入口](knowledge/README.md)，只读相关专题 |
-| 后端构建/测试 | [验证规范](rules/verification.md) |
+| Java/Maven 后端构建/测试 | [验证规范](rules/verification.md)；其他技术栈按项目实际入口 |
 | 测试说明 / 改动检查报告 / 明确要求的人工导航图 | [测试说明](rules/tester-note.md) / [检查报告](rules/change-report.md) / [首版导航](rules/first-pass-code-review.md) |
 | 结构、规则维护或治理问题 | [结构地图](STRUCTURE.md)、[规则索引](rules/INDEX.md)；治理问题再读 [治理说明](governance/agent-guard/README.md) |
 | 记录待改进计划 / 引入新项目 | [计划入口](plans/README.md)（记录不等于实施授权） / [项目接入指南](vibe-coding-新项目初始化指南.md) |

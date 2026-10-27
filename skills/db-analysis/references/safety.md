@@ -35,3 +35,7 @@ and supplies a read-only session setting plus a bounded statement timeout.
 ## Operating rule
 
 If the account check fails, create a dedicated read-only account instead of bypassing the script. The only exception is a deliberately configured test target with both `environment: test` and `allowPrivilegedTestAccount: true`; its SQL checks remain read-only and it must still be allowed by the Hook policy.
+
+## Redis test provider
+
+Redis test accounts may have write permissions. The provider permits only `PING`, exact-key metadata (`TYPE`, `TTL`, type-specific length), bounded `GET`/`HGET`, and one-page `SCAN` with a literal prefix. It sends no arbitrary command text, checks value lengths before retrieval, caps SCAN work at `COUNT 100`, and never loops through the complete keyspace in one request. SCAN `COUNT` is a hint rather than an exact result limit; returned keys are truncated for display. The Hook blocks direct `redis-cli` invocation and allows only explicit target/action names.

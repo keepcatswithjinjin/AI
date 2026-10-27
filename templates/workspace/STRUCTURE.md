@@ -9,6 +9,8 @@
 | AGENTS.md | 公共 Agent 入口：职责、核心约束与按需路由 |
 | CLAUDE.md | 仅导入 AGENTS.md，不重复正文 |
 | README.md | 人工概览与导航 |
+| LICENSE | 随安装保留的 MIT 许可声明 |
+| workstation-install.json | 框架版本、安装时间和选项；非业务状态，不代表自动升级 |
 | .gitignore | 用户启用根目录本地 Git 后的排除边界；安装不自动 git init |
 | rules/INDEX.md | 规则职责与同步清单 |
 | rules/execution-entry.md | 执行身份、必需上下文与按需能力路由 |
@@ -19,6 +21,8 @@
 | scripts/new-worktree.*、remove-worktree.* | 受控创建/删除、JSON 结果与代码位置索引同步 |
 | scripts/publish-to-branch.* | 发布、冲突输入冻结、核验及显式完成 |
 | scripts/sync-workstation-state.ps1 | 登记与单向阶段同步，不推断部署成功 |
+| scripts/worktree-locations.ps1 | 同一索引内的新旧位置适配，不维护第二份注册信息 |
+| rules/worktree-locations.md | 一需求多前后端位置的精确标识与兼容规则 |
 | governance/agent-guard/ | 现有跨 Agent 治理；受保护文件由人工维护 |
 | .codex/、.claude/ | 工作站本地 Hook 模板；不修改用户级配置 |
 | projects/ | 独立主项目容器；不得把业务代码提交到工作站仓库 |
@@ -48,7 +52,7 @@
 
 主项目位于 __WORKSPACE_ROOT__\projects\<项目>，执行目录位于 __WORKSPACE_ROOT__\worktrees\<项目>-worktree\<需求名>。注册表中的项目仅是待替换示例，不代表实际仓库存在。
 
-通用模板更新 master 时保留用户现场：要求根项目干净且只允许快进，不复制个人 Col 的自动丢弃改动策略。
+通用模板按项目配置更新基线：根项目须干净且只允许快进，不丢弃用户改动；离线模式不联网、不切根项目分支。
 
 ## 四、维护联动
 

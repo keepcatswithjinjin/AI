@@ -23,6 +23,7 @@ BASELINE_PROTECTED = [
     root_pattern("scripts", "db-targets.json"),
     root_pattern("scripts", "db-analysis.cmd"),
     root_pattern("scripts", "db-analysis.ps1"),
+    root_pattern("skills", "db-analysis", "**"),
     root_pattern("scripts", "publish-to-branch.cmd"),
     root_pattern("scripts", "publish-to-branch.ps1"),
     root_pattern(".codex", "config.toml"),

@@ -1,11 +1,16 @@
 param(
     [string]$Target,
-    [ValidateSet("ping", "grants", "databases", "schemas", "tables", "columns", "create", "query")]
+    [ValidateSet("ping", "grants", "databases", "schemas", "tables", "columns", "create", "query", "key-info", "get", "hget", "scan")]
     [string]$Action = "tables",
     [string]$Database,
     [string]$Schema,
     [string]$Table,
     [string]$Sql,
+    [string]$Key,
+    [string]$Field,
+    [string]$Pattern,
+    [string]$Cursor = "0",
+    [int]$Count = 50,
     [string]$ConfigPath = (Join-Path $PSScriptRoot "db-targets.json"),
     [switch]$ListTargets
 )
@@ -45,8 +50,8 @@ function Resolve-Target {
     }
 
     $targetType = if ($match[0].type) { $match[0].type } else { "mysql" }
-    if ($targetType.ToLowerInvariant() -notin @("mysql", "postgresql", "postgres")) {
-        throw "Unsupported target type '$targetType'. Supported types: mysql, postgresql."
+    if ($targetType.ToLowerInvariant() -notin @("mysql", "postgresql", "postgres", "redis")) {
+        throw "Unsupported target type '$targetType'. Supported types: mysql, postgresql, redis."
     }
 
     return $match[0]
@@ -493,6 +498,11 @@ if ($ListTargets) {
 $targetConfig = Resolve-Target -Config $config -Name $Target
 $dbName = if ($Database) { $Database } else { $targetConfig.database }
 $targetType = Get-TargetType -TargetConfig $targetConfig
+if ($targetType -eq 'redis') {
+    . (Join-Path $PSScriptRoot 'redis-provider.ps1')
+    Invoke-RedisAction -TargetConfig $targetConfig -ActionName $Action -KeyName $Key -FieldName $Field -ScanPattern $Pattern -ScanCursor $Cursor -ScanCount $Count
+    return
+}
 $dbName = if ($Action -in @('tables', 'columns', 'create', 'query', 'schemas')) { Resolve-ApprovedDatabase -TargetConfig $targetConfig -DatabaseName $dbName -ActionName $Action } else { $dbName }
 if ($targetType -eq 'mysql') {
     $grants = Assert-ReadonlyAccount -TargetConfig $targetConfig

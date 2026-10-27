@@ -11,7 +11,7 @@ from guard_utils import executable_tokens, is_executing_path, normalize
 
 def is_direct_db_client_invocation(command: str) -> bool:
     for token in executable_tokens(command):
-        if normalize(Path(token).name) in {"mysql", "mysql.exe", "mariadb", "mariadb.exe", "psql", "psql.exe"}:
+        if normalize(Path(token).name) in {"mysql", "mysql.exe", "mariadb", "mariadb.exe", "psql", "psql.exe", "redis-cli", "redis-cli.exe"}:
             return True
     return False
 

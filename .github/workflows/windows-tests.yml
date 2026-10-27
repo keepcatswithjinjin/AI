@@ -1,0 +1,25 @@
+name: Windows template tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  template:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check prerequisites
+        shell: pwsh
+        run: ./check-environment.ps1
+      - name: Run isolated workflow tests
+        shell: pwsh
+        run: ./tests/test-workspace-template.ps1
+      - name: Check lifecycle hook result validation
+        shell: pwsh
+        run: python -m unittest discover -s templates/workspace/governance/agent-guard/tests -p test_post_tool_guard.py

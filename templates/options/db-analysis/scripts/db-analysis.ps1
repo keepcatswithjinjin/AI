@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
-$codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
-$skillScript = Join-Path $codexHome "skills\db-analysis\scripts\db-analysis.ps1"
+$workspaceRoot = Split-Path -Parent $PSScriptRoot
+$skillScript = Join-Path $workspaceRoot "skills\db-analysis\scripts\db-analysis.ps1"
 if (-not (Test-Path -LiteralPath $skillScript)) {
     throw "db-analysis skill script not found: $skillScript"
 }

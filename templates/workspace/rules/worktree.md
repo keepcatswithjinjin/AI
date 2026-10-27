@@ -6,10 +6,16 @@
 
 ## 根项目注册表
 
-| Key | 仓库路径 | 定位 | Worktree 父目录 |
-|-----|---------|------|----------------|
-| `project-api` | `__WORKSPACE_ROOT__\projects\project-api` | 示例后端项目，使用前替换 | `__WORKSPACE_ROOT__\worktrees\project-api-worktree` |
-| `project-web` | `__WORKSPACE_ROOT__\projects\project-web` | 示例前端项目，使用前替换 | `__WORKSPACE_ROOT__\worktrees\project-web-worktree` |
+| Key | 仓库路径 | 定位 | Worktree 父目录 | 默认基线 | 远端 |
+|-----|---------|------|----------------|----------|------|
+| `project-api` | `__WORKSPACE_ROOT__\projects\project-api` | 示例后端项目，使用前替换 | `__WORKSPACE_ROOT__\worktrees\project-api-worktree` | `master` | `origin` |
+| `project-web` | `__WORKSPACE_ROOT__\projects\project-web` | 示例前端项目，使用前替换 | `__WORKSPACE_ROOT__\worktrees\project-web-worktree` | `main` | `origin` |
+
+末两列是示例，不是全局默认值。旧四列表继续可读，但创建时需明确传 BaseBranch 与 Remote（离线 SkipBaseUpdate 不要求远端）。每项目登记真实基线和远端；远端默认分支只作候选，不从当前分支猜测。创建参数可单次覆盖，不影响已有 worktree，也不决定发布目标。
+
+默认更新仅操作选定远端与基线，要求根仓库干净并只允许快进；失败停止，不硬重置。`-SkipBaseUpdate` 为明确离线模式，不 fetch、不切根项目分支，从已存在的本地基线创建。Preview 不联网也不修改仓库，执行时仍可能因远端变化失败。
+
+一需求多前后端位置见 [位置规范](worktree-locations.md)，使用 LocationId 精确创建与清理；不迁移旧记录。
 
 ---
 
@@ -67,14 +73,14 @@ feature 还是 hotfix？
 询问用户：
 
 ```
-是否基于最新 master 创建？
-- 是：先更新主项目 master，再从 master 创建新分支（默认）
+是否更新并使用该项目登记的基线？
+- 是：更新选定远端与基线，仅快进
 - 否：请指定一个已存在分支名，基于该分支创建
 ```
 
 约束：
 
-- 默认基于最新 `master`。
+- 默认使用项目注册表中的基线和远端；缺失时明确指定，不猜测 master/main。
 - 用户有特殊需求时，允许指定已存在分支，例如 `testing`、`feature/xxx`、`hotfix/xxx`。
 - 指定现有分支时，创建前必须先确认该分支在本地或远端存在；不存在则停止并提示用户确认分支名。
 - 除非用户明确要求，不自动从非 `master` 分支创建。
@@ -110,13 +116,15 @@ __WORKSPACE_ROOT__\scripts\new-worktree.cmd -ProjectKey project-api -Name my-fea
 1. **Worktree 必须放在 `__WORKSPACE_ROOT__\worktrees\<原项目目录名>-worktree\<需求名>/` 目录下**
 2. **Worktree 父目录首次使用时自动创建**（`mkdir -p`）
 3. **分支命名**：`feature/<需求名>` 或 `hotfix/<需求名>`；单次授权跳过 worktree 时仍适用，用户明确指定完整分支名时按其指定执行
-4. **基于分支**：默认基于最新 `master`；有特殊需求时允许用户指定已存在分支
+4. **基于分支**：使用项目登记基线，或显式 BaseBranch/Remote 覆盖；离线 SkipBaseUpdate 只使用本地引用
 5. **已有旧 worktree 不迁移**
 6. **同步代码位置索引**：创建完成后必须更新 `briefs/WORKTREE-INDEX.md`，记录 brief、代码位置和分支
 
 ---
 
 ## 临时发布到测试或集成分支
+
+单次授权根项目分支按 [生命周期例外](task-lifecycle.md#单次授权的适用边界)，不扩大授权；常规 worktree 发布仍走受控脚本。
 
 功能 worktree 不需要长期维护额外的测试分支 worktree。功能完成后，可在同一 worktree 临时切换到调用方指定的目标分支；必须先用 `__WORKSPACE_ROOT__\scripts\publish-to-branch.cmd` 预览并经人工确认后执行。
 

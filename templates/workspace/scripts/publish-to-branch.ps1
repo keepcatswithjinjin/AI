@@ -234,6 +234,11 @@ function Resolve-RequirementRuntimeRoot {
             foreach ($line in [System.IO.File]::ReadAllLines($index)) {
                 if ($line -notmatch '^\s*\|') { continue }
                 $cells = $line.Split('|')
+                $values = @($cells | Select-Object -Skip 1 | Select-Object -SkipLast 1 | ForEach-Object { $_.Trim().Trim([char]96) })
+                if ($values.Count -ge 8 -and $values[0] -match '^(backend|frontend|cross):([a-z0-9]+(?:-[a-z0-9]+)*)$') {
+                    $locationType = $Matches[1]; $locationName = $Matches[2]
+                    if ($values[4].TrimEnd('\','/').Equals($script:resolvedProjectPath, [StringComparison]::OrdinalIgnoreCase)) { $candidates += Join-Path $briefsRoot "$locationType\$locationName" }
+                }
                 $matchesProject = @($cells | Where-Object { $_.Trim().Trim([char]96).TrimEnd('\','/').Equals($script:resolvedProjectPath, [System.StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
                 if ($matchesProject -and $line -match 'briefs/(backend|frontend|cross)/([a-z0-9]+(?:-[a-z0-9]+)*)/') {
                     $candidates += Join-Path $briefsRoot "$($Matches[1])\$($Matches[2])"

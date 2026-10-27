@@ -17,11 +17,11 @@ D:\Workspace\                               # 安装后的工作区容器，不�
 
 跨项目方案、接口契约和执行交接统一放在工作站的 `briefs/`，不依赖项目内的自定义任务目录。需求对应的前端/后端代码位置和分支维护在 `briefs/WORKTREE-INDEX.md`。需要长期保存或跨项目复用的文件产物放在 `artifacts/`，不要用它推断需求状态或分支。
 
-新需求先登记，不预建空设计；实际设计时生成 README 与 spec，阶段结束或暂停时自动维护 runtime/agent-guide.md。knowledge 保存整理过的业务指导，artifacts 保存用户留下的原始材料/交付文件，tmp 是用户定期清理的杂物区。模板不预填 author、OverSea 或任何其他真实主题。
+新需求先登记，不预建空设计；实际设计时生成 README 与 spec，阶段结束或暂停时自动维护 runtime/agent-guide.md。knowledge 保存整理过的业务指导，artifacts 保存用户留下的原始材料/交付文件，tmp 是用户定期清理的杂物区。模板不预填任何个人业务主题。
 
 ## 2. 安装模板
 
-先准备 PowerShell 7 与 Git。Git 生命周期入口使用 pwsh，不回退到 Windows PowerShell 5.1。
+当前支持 Windows。先准备 PowerShell 7、Git 与 Python 3（默认治理 Hook 使用），运行 `pwsh -NoProfile -File ./check-environment.ps1` 检查。该检查不安装工具、不连接外部服务，也不验证 Agent 登录及业务工具链。Git 生命周期入口使用 pwsh，不回退到 Windows PowerShell 5.1。
 
 ```powershell
 Set-Location D:\AI-Toolkit\multi-project-workstation
@@ -41,6 +41,10 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 安装同时渲染隐藏的 .codex/.claude 目录；不自动信任 Hook、连接数据库、启用云效或运行 Git。已有工作区不能通过重跑安装覆盖；可选能力后续增装也按选择性升级处理。
 
 Agent 创建/删除调用使用 `-OutputFormat Json`，登记需求传 RequirementKey 与 Role；执行前预览，删除确认后追加 Confirm。通用模板不采用 Col 个人实例的根项目强制清理/硬重置：默认要求根仓库干净且只允许快进。
+
+项目注册表末两列维护默认基线及远端，可分别使用 main/master/develop 与 origin/upstream 等；创建用 BaseBranch/Remote 单次覆盖。旧四列表需显式传参，不猜测默认值。SkipBaseUpdate 为离线模式，不 fetch、不切根项目分支；只用已存在本地基线。创建远端与发布远端不是同一设置，发布脚本当前仍使用 origin。
+
+多个代码位置传 LocationId（需求内稳定唯一）及 Role，LocationGroup 仅为可选关联标签；见安装后 rules/worktree-locations.md。旧表不迁移，新表在首次创建时追加；清理要求 ID/角色/路径精确匹配。尚有有效位置时不得推进 Released。
 
 功能完成并需要合入测试或集成分支时，使用 `scripts\publish-to-branch.cmd`。它要求显式指定目标分支、逗号分隔的仓库相对文件清单和提交信息；先运行 `-Preview`，确认后再执行。脚本会先推送源分支并修正 upstream，再临时切换、合入并推送目标分支；目标分支占用、冲突或远端拒绝时会停止等待人工决定。
 
@@ -131,6 +135,8 @@ startup_timeout_sec = 120
 ## 6. 维护与升级
 
 框架变更在本仓库中提交；已有工作区不会自动更新。升级前先比较模板与工作区的治理、脚本和规则，再有选择地合并。不要用模板覆盖本地数据库配置、云效 token、云效个人组织/项目目录、brief/worktree 分支索引或项目注册表。
+
+新安装的 `workstation-install.json` 保存框架版本、安装时间和可选能力选择；不保存凭据，不代表升级完成。旧实例没有此文件时不能猜测版本或自动补写；先核对差异。开发版版本号不代表已在干净发行提交验证。
 
 受保护的治理文件默认不能由 Agent 修改。需要维护时，由人工在安装后的 `governance\agent-guard\` 中，从 `maintenance-approval.example.json` 创建 `maintenance-approval.json` 并将其内容设为 `{ "enabled": true }`；完成后手动删除该文件或改回 `false`。该文件本身始终受保护，Agent 无法自行开启维护窗口。
 

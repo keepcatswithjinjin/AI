@@ -31,6 +31,21 @@
       "queryTimeoutSeconds": 600,
       "maxRows": 1000,
       "note": "Generic PostgreSQL/Hologres readonly target. Keep credentials only in a local pgpass file."
+    },
+    {
+      "name": "example-redis-test",
+      "type": "redis",
+      "environment": "test",
+      "host": "redis.example.internal",
+      "port": 6379,
+      "redisDb": 0,
+      "user": "",
+      "redisCliPath": "",
+      "redisAuthFile": "",
+      "tls": false,
+      "allowedKeyPrefixes": ["example:"],
+      "maxValueBytes": 65536,
+      "note": "Example only. Store credentials in a local private file; only bounded read actions are exposed."
     }
   ]
 }

@@ -9,6 +9,7 @@ param(
     [string]$OutputFormat = "Human",
 
     [string]$RequirementKey = "",
+    [string]$LocationId = "",
     [ValidateSet("", "backend", "frontend")]
     [string]$Role = "",
 
@@ -18,6 +19,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'worktree-locations.ps1')
 $ResultState = [ordered]@{}
 $ResultEffects = [System.Collections.Generic.List[object]]::new()
 
@@ -203,6 +205,7 @@ function Resolve-WorktreeIndexMapping {
 
 function Sync-WorktreeIndex {
     param([Parameter(Mandatory = $true)][psobject]$Mapping)
+    if ($Mapping.PSObject.Properties['Format'] -and $Mapping.Format -eq 'locations-v2') { Sync-MultiLocationIndex -Mapping $Mapping -Cleanup; return }
     $cells = @($Mapping.Cells)
     $cells[$Mapping.PathIndex] = '—'
     $cells[$Mapping.BranchIndex] = '—'
@@ -246,8 +249,13 @@ if ($parent.Equals($resolvedWorktreesRoot, [System.StringComparison]::OrdinalIgn
 }
 
 $indexMapping = $null
+if ($LocationId -and !$RequirementKey) { throw 'LocationId requires RequirementKey.' }
 if ($RequirementKey) {
-    $indexMapping = Resolve-WorktreeIndexMapping -Requirement $RequirementKey -RequestedRole $Role -ExpectedPath $resolvedWorktreePath -IndexPath $WorktreeIndexPath
+    if ($LocationId) { $indexMapping = Resolve-MultiLocationMapping -IndexPath $WorktreeIndexPath -Requirement $RequirementKey -LocationId $LocationId -Role $Role -ExpectedPath $resolvedWorktreePath -Cleanup }
+    else {
+        if (@((Read-MultiLocationIndex $WorktreeIndexPath).Rows | Where-Object { $_.Cells[0] -eq $RequirementKey -and $_.Cells[4].TrimEnd('\','/').Equals($resolvedWorktreePath, [StringComparison]::OrdinalIgnoreCase) }).Count) { throw 'Multi-location cleanup requires LocationId.' }
+        $indexMapping = Resolve-WorktreeIndexMapping -Requirement $RequirementKey -RequestedRole $Role -ExpectedPath $resolvedWorktreePath -IndexPath $WorktreeIndexPath
+    }
     $ResultState.indexSync = [ordered]@{
         status = if ($Preview) { 'planned' } else { 'pending' }
         indexPath = $WorktreeIndexPath

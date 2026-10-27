@@ -58,6 +58,8 @@
 
 ### 3.2 新增 worktree
 
+项目注册表的默认基线/远端用于创建，可用 `-BaseBranch`/`-Remote` 覆盖。多位置按 [位置规范](../rules/worktree-locations.md)传 `-LocationId`，可选 `-LocationGroup`；清理新表记录也必须传 ID。索引兼容旧表，失败为 partial 时先核验，不自动删除成功位置。
+
 常用命令：
 
 ```powershell
@@ -72,7 +74,7 @@
 - 分支名固定为 `feature/<需求名>` 或 `hotfix/<需求名>`。
 - `-Name` 必须是 kebab-case。
 - Git 生命周期入口依赖 PowerShell 7；缺失时报错，不回退到 5.1。
-- 默认 master 更新要求根仓库干净，只允许快进；不执行个人工作站式的自动清理和硬重置。
+- 基线和远端来自项目注册表，可用 BaseBranch/Remote 单次覆盖；旧表缺失时明确传参，不默认 master/origin。更新要求根仓库干净且仅快进；SkipBaseUpdate 明确离线，不联网或切根项目分支。
 - Agent 调用使用 `-OutputFormat Json`；复杂需求传 `-RequirementKey <type:name> -Role backend|frontend`，由脚本精确同步 WORKTREE-INDEX；返回 partial 时先修复索引，不启动实施。
 
 ### 3.3 数据库分析（可选）
@@ -146,6 +148,8 @@ pwsh -NoProfile -File .\scripts\db-analysis.ps1 -Target example-postgresql-reado
 索引先登记；DesignReady 校验 spec 文档，Developing 校验有效目录，Released 校验无活动目录。实际 Git 仍须核验；状态只单向推进，重复动作幂等，不依赖客户端。
 
 ### 3.5 发布当前功能分支到指定分支
+
+发布脚本需要已批准且含 README 的需求目录；单次授权根项目分支且跳过 briefs 时按 [生命周期例外](../rules/task-lifecycle.md#单次授权的适用边界)操作，不为脚本补空 brief。当前发布远端固定为 origin；创建时选择其他 Remote 不会改变发布目标。
 
 ```powershell
 .\scripts\publish-to-branch.cmd `

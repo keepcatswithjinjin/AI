@@ -3,12 +3,15 @@ param(
     [string]$Name = "",
     [ValidateSet("feature", "hotfix")]
     [string]$Type = "feature",
-    [string]$BaseBranch = "master",
+    [string]$BaseBranch = "",
+    [string]$Remote = "",
     [switch]$Preview,
     [switch]$SkipBaseUpdate,
     [ValidateSet("Human", "Json")]
     [string]$OutputFormat = "Human",
     [string]$RequirementKey = "",
+    [string]$LocationId = "",
+    [string]$LocationGroup = "",
     [ValidateSet("", "backend", "frontend")]
     [string]$Role = "",
     [string]$WorktreeRulesPath = "__WORKSPACE_ROOT__\rules\worktree.md",
@@ -16,6 +19,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot 'worktree-locations.ps1')
 $ResultState = [ordered]@{}
 $ResultEffects = [System.Collections.Generic.List[object]]::new()
 
@@ -76,6 +80,8 @@ function Get-WorktreeRegistry {
                 RepoPath = Normalize-PathString $Matches[2]
                 Description = $Matches[3].Trim()
                 WorktreeParent = Normalize-PathString $Matches[4]
+                BaseBranch = (($line.Trim().Split('|') | Select-Object -Skip 5 -First 1) -join '').Trim().Trim([char]96)
+                Remote = (($line.Trim().Split('|') | Select-Object -Skip 6 -First 1) -join '').Trim().Trim([char]96)
             }
         }
     }
@@ -108,20 +114,25 @@ function Assert-WorktreeName {
     }
 }
 
-function Update-MasterBaseline {
-    param([Parameter(Mandatory = $true)][string]$RepositoryPath)
+function Update-ProjectBaseline {
+    param([string]$RepositoryPath, [string]$Branch, [string]$RemoteName)
 
     # Reusable workspaces must preserve users' existing root-repository work.
     $dirty = @(git -c safe.directory=* -C $RepositoryPath status --porcelain)
     if ($LASTEXITCODE -ne 0) { throw "Failed to read root repository status: $RepositoryPath" }
     if ($dirty.Count) { throw "Root repository has uncommitted changes; refusing baseline update: $RepositoryPath" }
-    git -c safe.directory=* -C $RepositoryPath fetch origin master 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Failed to fetch origin master." }
-    git -c safe.directory=* -C $RepositoryPath checkout master 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Failed to switch root repository to master: $RepositoryPath" }
-    git -c safe.directory=* -C $RepositoryPath merge --ff-only origin/master 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Failed to fast-forward master; preserve the repository and request human direction." }
-    return 'fast-forward-origin/master'
+    git -c safe.directory=* -C $RepositoryPath fetch -- $RemoteName "+refs/heads/${Branch}:refs/remotes/$RemoteName/$Branch" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Failed to fetch selected baseline: $RemoteName/$Branch" }
+    git -c safe.directory=* -C $RepositoryPath show-ref --verify --quiet "refs/heads/$Branch"
+    if ($LASTEXITCODE -eq 0) {
+        git -c safe.directory=* -C $RepositoryPath switch -- $Branch 2>&1 | Out-Null
+    } else {
+        git -c safe.directory=* -C $RepositoryPath switch -c $Branch --track "$RemoteName/$Branch" 2>&1 | Out-Null
+    }
+    if ($LASTEXITCODE -ne 0) { throw "Failed to switch root repository to baseline: $Branch" }
+    git -c safe.directory=* -C $RepositoryPath merge --ff-only -- "$RemoteName/$Branch" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Baseline diverged; preserve repository and request human direction.' }
+    return "fast-forward-$RemoteName/$Branch"
 }
 
 function Get-MarkdownTableCells {
@@ -202,6 +213,7 @@ function Resolve-WorktreeIndexMapping {
 
 function Sync-WorktreeIndex {
     param([Parameter(Mandatory = $true)][psobject]$Mapping, [Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][string]$Branch)
+    if ($Mapping.PSObject.Properties['Format'] -and $Mapping.Format -eq 'locations-v2') { Sync-MultiLocationIndex -Mapping $Mapping -Path $Path -Branch $Branch; return }
     $cells = @($Mapping.Cells)
     $cells[$Mapping.PathIndex] = ('`' + $Path + '`')
     $cells[$Mapping.BranchIndex] = ('`' + $Branch + '`')
@@ -222,6 +234,17 @@ if ($registry.Count -eq 0) {
 
 $project = Select-Project -Registry $registry -Key $ProjectKey
 
+if (!$BaseBranch) { $BaseBranch = $project.BaseBranch }
+if (!$Remote) { $Remote = $project.Remote }
+if (!$BaseBranch) { throw 'No project baseline configured. Supply -BaseBranch explicitly; do not guess master/main.' }
+git -C $project.RepoPath check-ref-format --branch $BaseBranch 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Invalid baseline branch.' }
+if (!$SkipBaseUpdate) {
+    if (!$Remote -or $Remote -notmatch '^[a-zA-Z0-9][a-zA-Z0-9._-]*$') { throw 'Configure project remote or supply -Remote; no remote is guessed.' }
+    $remoteNames = @(git -C $project.RepoPath remote)
+    if ($LASTEXITCODE -ne 0 -or $Remote -notin $remoteNames) { throw 'Selected remote does not exist.' }
+}
+
 if ([string]::IsNullOrWhiteSpace($Name)) {
     $Name = Read-Host "Worktree name"
 }
@@ -234,6 +257,7 @@ $ResultState.repositoryPath = $project.RepoPath
 $ResultState.worktreePath = $worktreePath
 $ResultState.branch = $branchName
 $ResultState.baseBranch = $BaseBranch
+$ResultState.remote = $Remote
 $ResultState.requirementKey = $RequirementKey
 $ResultState.role = $Role
 
@@ -246,8 +270,13 @@ if (-not (Test-Path -LiteralPath $project.RepoPath)) {
 }
 
 $indexMapping = $null
+if (($LocationId -and !$RequirementKey) -or ($LocationGroup -and !$LocationId)) { throw 'LocationId requires RequirementKey; LocationGroup requires LocationId.' }
 if ($RequirementKey) {
-    $indexMapping = Resolve-WorktreeIndexMapping -Requirement $RequirementKey -RequestedRole $Role -IndexPath $WorktreeIndexPath
+    if ($LocationId) { $indexMapping = Resolve-MultiLocationMapping -IndexPath $WorktreeIndexPath -Requirement $RequirementKey -LocationId $LocationId -Role $Role -ProjectKey $project.Key -ExpectedPath $worktreePath -Group $LocationGroup }
+    else {
+        if (@((Read-MultiLocationIndex $WorktreeIndexPath).Rows | Where-Object { $_.Cells[0] -eq $RequirementKey }).Count) { throw 'Multi-location requirement requires LocationId.' }
+        $indexMapping = Resolve-WorktreeIndexMapping -Requirement $RequirementKey -RequestedRole $Role -IndexPath $WorktreeIndexPath
+    }
     $ResultState.indexSync = [ordered]@{ status = if ($Preview) { 'planned' } else { 'pending' }; indexPath = $WorktreeIndexPath; requirementKey = $indexMapping.RequirementKey; role = $indexMapping.Role }
     [void]$ResultEffects.Add([pscustomobject]@{ type = 'worktree.index-update'; status = 'planned'; requirementKey = $indexMapping.RequirementKey; role = $indexMapping.Role })
 }
@@ -268,6 +297,12 @@ Write-Host "  repo: $($project.RepoPath)"
 Write-Host "  worktree: $worktreePath"
 Write-Host "  branch: $branchName"
 Write-Host "  base branch: $BaseBranch"
+Write-Host "  remote: $Remote"
+Write-Host "  baseline update: $(-not $SkipBaseUpdate)"
+if ($SkipBaseUpdate) {
+    git -C $project.RepoPath rev-parse --verify --quiet "refs/heads/$BaseBranch^{commit}" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Selected local baseline not found: $BaseBranch" }
+}
 
 if ($Preview) {
     Complete-WorkflowResult -Outcome "planned" -ExitCode 0 -NextAction "Obtain human confirmation, then rerun without -Preview."
@@ -277,27 +312,10 @@ if (-not (Test-Path -LiteralPath $project.WorktreeParent)) {
     New-Item -ItemType Directory -Path $project.WorktreeParent | Out-Null
 }
 
-if ($BaseBranch -eq "master" -and -not $SkipBaseUpdate) {
-    $ResultState.masterBaseline = Update-MasterBaseline -RepositoryPath $project.RepoPath
-    $baseRef = "master"
-}
-else {
-    git -c safe.directory=* -C $project.RepoPath fetch --all --prune 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to fetch refs."
-    }
-    git -c safe.directory=* -C $project.RepoPath rev-parse --verify --quiet $BaseBranch 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        $baseRef = $BaseBranch
-    }
-    else {
-        git -c safe.directory=* -C $project.RepoPath rev-parse --verify --quiet "origin/$BaseBranch" 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            throw "Base branch not found locally or on origin: $BaseBranch"
-        }
-        $baseRef = "origin/$BaseBranch"
-    }
-}
+if (!$SkipBaseUpdate) { $ResultState.baselineUpdate = Update-ProjectBaseline -RepositoryPath $project.RepoPath -Branch $BaseBranch -RemoteName $Remote }
+$baseRef = "refs/heads/$BaseBranch"
+git -C $project.RepoPath rev-parse --verify --quiet "$baseRef^{commit}" 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Selected local baseline not found: $BaseBranch" }
 
 git -c safe.directory=* -C $project.RepoPath worktree add -b $branchName $worktreePath $baseRef 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {

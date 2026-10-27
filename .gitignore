@@ -13,6 +13,13 @@ local/
 !**/*.example.json
 !**/*.example.cmd
 *.env
+**/.env
+**/.env.*
+!**/.env.example
+**/private/
+**/*.cnf
+**/*.pem
+**/*.key
 
 # Python runtime artefacts
 __pycache__/

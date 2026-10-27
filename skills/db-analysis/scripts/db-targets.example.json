@@ -28,6 +28,21 @@
       "queryTimeoutSeconds": 600,
       "maxRows": 1000,
       "note": "Example only. Hologres production readonly target."
+    },
+    {
+      "name": "redis-test",
+      "type": "redis",
+      "environment": "test",
+      "host": "redis.example.internal",
+      "port": 6379,
+      "redisDb": 0,
+      "user": "",
+      "redisCliPath": "",
+      "redisAuthFile": "D:\\private\\redis\\test.password",
+      "tls": false,
+      "allowedKeyPrefixes": [],
+      "maxValueBytes": 65536,
+      "note": "Example only. Test Redis diagnostics with bounded reads."
     }
   ]
 }

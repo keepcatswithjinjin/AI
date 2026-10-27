@@ -6,7 +6,7 @@
 
 先读需求根 README；当前设计、契约与计划位于 spec，执行交接位于 runtime。历史快照与备份不作为当前 Review 输入。
 
-1. 复杂需求先读 `spec/design.md`，确认最新目标、方案变化、旧逻辑和验收边界；再读适用的 `spec/api-contract.md` 与前后端计划。简单需求以用户当前明确的范围和当前 diff 为准。`agent-guide.md` 仅在需要执行状态或验证证据时读取，不作为设计事实源。
+1. 复杂需求先读 design 核对目标、决定、旧逻辑、DDL 与发布范围，再读适用契约和计划核对验收验证。简单需求以用户明确范围和当前 diff 为准；交接仅在需状态或验证证据时读取，不作为设计事实源。
 2. `__WORKSPACE_ROOT__\briefs\WORKTREE-INDEX.md`：确认代码位置与分支；最终以当前仓库 Git 状态为准。
 3. `__WORKSPACE_ROOT__\rules\review-standard.md`：Review 范围、优先级和证据要求。
 4. `__WORKSPACE_ROOT__\rules\review-report.md`：报告格式。

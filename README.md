@@ -22,7 +22,7 @@
 
 ## 快速开始
 
-使用 PowerShell 7（pwsh），并安装 Git。安装不克隆项目、不初始化工作站 Git、不连接外部服务。可选数据库能力的客户端由使用者另行准备。
+当前支持 Windows、PowerShell 7、Git 和 Python 3（默认治理 Hook 使用）。运行 `pwsh -NoProfile -File ./check-environment.ps1` 只读检查环境。安装不克隆项目、不初始化工作站 Git、不连接外部服务；Agent 登录、项目工具链和可选数据库客户端需另行准备。Java/Maven 规则是参考适配，不适用于所有后端。
 
 ```powershell
 Set-Location D:\AI-Toolkit\multi-project-workstation
@@ -36,5 +36,11 @@ Set-Location D:\AI-Toolkit\multi-project-workstation
 ```
 
 安装后从 `D:\Workspace` 根目录打开 Codex / Claude Code；工作站本地 `.codex` 与 `.claude` 会把 Hook 指向 `D:\Workspace\governance\agent-guard`。如工具提示需要信任本地 Hook，人工确认后生效。
+
+第一次使用见 [AI 接入与最小流程](GETTING-STARTED.zh-CN.md)。版本来源记录于安装后的 `workstation-install.json`；它不执行自动升级。已有工作站仍须按使用指南选择性合并，不能覆盖 briefs、注册信息、凭据或用户规则。
+
+本框架采用 [MIT 许可证](LICENSE)。贡献及验证见 [CONTRIBUTING.md](CONTRIBUTING.md)，安全边界见 [SECURITY.md](SECURITY.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)。Git、Python、各 Agent 及外部服务不随本许可重新授权，遵守其各自条款。
+
+支持一需求多个前后端代码位置，旧索引兼容读取；项目可分别登记开发基线和远端，不统一假设 master/origin。具体参数与边界见安装后的规则与脚本索引。发布脚本目前仍使用 origin 作为发布远端，不将创建基线的远端适配误称为全链路多远端支持。
 
 2026-10-21 已按 Col 当前通用结构同步：精简公共入口、按需执行路由、spec/runtime 归属、自动交接、JSON worktree 结果、阶段同步和需求内冲突核验。未同步业务知识、真实注册表、凭据或个人配置；通用模板保留干净根仓库快进和人工治理批准边界。验证方法与同步差异见使用指南。
